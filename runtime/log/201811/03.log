@@ -1,0 +1,205 @@
+---------------------------------------------------------------
+[ 2018-11-03T10:29:49+08:00 ] 0.0.0.0 GET /Jshop/public/
+[ info ] localhost/Jshop/public/ [运行时间：0.046506s][吞吐率：21.50req/s] [内存消耗：1,430.30kb] [文件加载：83]
+[ info ] [ CACHE ] INIT File
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ error ] [1045]SQLSTATE[HY000] [1045] Access denied for user ''@'localhost' (using password: NO)[D:\www\Jshop\thinkphp\library\think\db\Connection.php:501]
+---------------------------------------------------------------
+[ 2018-11-03T10:35:23+08:00 ] 0.0.0.0 GET /Jshop/public/
+[ info ] localhost/Jshop/public/ [运行时间：0.037505s][吞吐率：26.66req/s] [内存消耗：1,467.55kb] [文件加载：87]
+[ info ] [ CACHE ] INIT File
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ sql ] [ DB ] CONNECT:[ UseTime:0.001500s ] mysql:host=localhost;port=3306;dbname=jshop;charset=utf8
+[ error ] [10501]SQLSTATE[42S02]: Base table or view not found: 1146 Table 'jshop.hooks' doesn't exist[D:\www\Jshop\thinkphp\library\think\db\Connection.php:675]
+---------------------------------------------------------------
+[ 2018-11-03T10:38:58+08:00 ] 0.0.0.0 GET /Jshop_mall-master/public/
+[ info ] localhost/Jshop_mall-master/public/ [运行时间：0.045506s][吞吐率：21.98req/s] [内存消耗：1,470.16kb] [文件加载：87]
+[ info ] [ CACHE ] INIT File
+[ info ] [ DB ] INIT mysql
+[ info ] [ LOG ] INIT File
+[ sql ] [ DB ] CONNECT:[ UseTime:0.005501s ] mysql:host=localhost;port=3306;dbname=jshop;charset=utf8
+[ error ] [10501]SQLSTATE[42S02]: Base table or view not found: 1146 Table 'jshop.hooks' doesn't exist[D:\www\Jshop_mall-master\thinkphp\library\think\db\Connection.php:675]
+---------------------------------------------------------------
+[ 2018-11-03T10:43:09+08:00 ] 0.0.0.0 GET /Jshop_mall-master/public/
+[ info ] localhost/Jshop_mall-master/public/ [运行时间：0.079510s][吞吐率：12.58req/s] [内存消耗：1,817.65kb] [文件加载：100]
+[ info ] [ CACHE ] INIT File
+[ info ] [ DB ] INIT mysql
+[ info ] [ BEHAVIOR ] Run app\common\behavior\InitHooks->run @app_init [ RunTime:0.062508s ]
+[ info ] [ LANG ] D:\www\Jshop_mall-master\thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=j8f38tfpl0dn5689nbl9acnii2; redirect_url=%2Fjshop_mall%2Fpublic%2Findex.php%2Fmanage; _aihecong_chat_visibility=false',
+  'accept-language' => 'zh-CN,zh;q=0.9',
+  'accept-encoding' => 'gzip, deflate, br',
+  'referer' => 'http://localhost/Jshop_mall-master/',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+  'user-agent' => 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36',
+  'upgrade-insecure-requests' => '1',
+  'connection' => 'close',
+  'host' => 'localhost',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LOG ] INIT File
+[ sql ] [ DB ] CONNECT:[ UseTime:0.011001s ] mysql:host=localhost;port=3306;dbname=jshop;charset=utf8
+[ sql ] [ SQL ] SHOW COLUMNS FROM `hooks` [ RunTime:0.009001s ]
+[ sql ] [ SQL ] SELECT `name`,`addons` FROM `hooks` [ RunTime:0.000500s ]
+[ sql ] [ SQL ] SHOW COLUMNS FROM `addons` [ RunTime:0.015501s ]
+[ sql ] [ SQL ] SELECT `name` FROM `addons` WHERE  `status` = 1  AND `name` IN ('appletmessage','test') [ RunTime:0.002001s ]
+[ sql ] [ SQL ] SELECT `name` FROM `addons` WHERE  `status` = 1  AND `name` IN ('appletmessage') [ RunTime:0.000500s ]
+[ sql ] [ SQL ] SELECT `name` FROM `addons` WHERE  `status` = 1  AND `name` IN ('hecong') [ RunTime:0.000500s ]
+---------------------------------------------------------------
+[ 2018-11-03T10:47:55+08:00 ] 0.0.0.0 GET /Jshop_mall-master/public/
+[ info ] localhost/Jshop_mall-master/public/ [运行时间：0.046006s][吞吐率：21.74req/s] [内存消耗：1,076.09kb] [文件加载：92]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run app\common\behavior\InitHooks->run @app_init [ RunTime:0.011502s ]
+[ info ] [ LANG ] D:\www\Jshop_mall-master\thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=j8f38tfpl0dn5689nbl9acnii2; redirect_url=%2Fjshop_mall%2Fpublic%2Findex.php%2Fmanage; _aihecong_chat_visibility=false',
+  'accept-language' => 'zh-CN,zh;q=0.9',
+  'accept-encoding' => 'gzip, deflate, br',
+  'referer' => 'http://localhost/Jshop_mall-master/',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+  'user-agent' => 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36',
+  'upgrade-insecure-requests' => '1',
+  'connection' => 'close',
+  'host' => 'localhost',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2018-11-03T10:54:27+08:00 ] 0.0.0.0 GET /Jshop_mall-master/public/
+[ info ] localhost/Jshop_mall-master/public/ [运行时间：0.031504s][吞吐率：31.74req/s] [内存消耗：1,075.67kb] [文件加载：92]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run app\common\behavior\InitHooks->run @app_init [ RunTime:0.010502s ]
+[ info ] [ LANG ] D:\www\Jshop_mall-master\thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=j8f38tfpl0dn5689nbl9acnii2; redirect_url=%2Fjshop_mall%2Fpublic%2Findex.php%2Fmanage; _aihecong_chat_visibility=false',
+  'accept-language' => 'zh-CN,zh;q=0.9',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+  'user-agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1',
+  'upgrade-insecure-requests' => '1',
+  'connection' => 'close',
+  'host' => 'localhost',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2018-11-03T11:04:09+08:00 ] 0.0.0.0 GET /Jshop_mall-master/public/
+[ info ] localhost/Jshop_mall-master/public/ [运行时间：0.024003s][吞吐率：41.66req/s] [内存消耗：1,075.36kb] [文件加载：92]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run app\common\behavior\InitHooks->run @app_init [ RunTime:0.006501s ]
+[ info ] [ LANG ] D:\www\Jshop_mall-master\thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=j8f38tfpl0dn5689nbl9acnii2; _aihecong_chat_visibility=false',
+  'accept-language' => 'zh-CN,zh;q=0.9',
+  'accept-encoding' => 'gzip, deflate, br',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+  'user-agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1',
+  'upgrade-insecure-requests' => '1',
+  'connection' => 'close',
+  'host' => 'localhost',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2018-11-03T11:04:17+08:00 ] 0.0.0.0 GET /Jshop_mall-master/public/
+[ info ] localhost/Jshop_mall-master/public/ [运行时间：0.028503s][吞吐率：35.08req/s] [内存消耗：1,075.66kb] [文件加载：92]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run app\common\behavior\InitHooks->run @app_init [ RunTime:0.010002s ]
+[ info ] [ LANG ] D:\www\Jshop_mall-master\thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=j8f38tfpl0dn5689nbl9acnii2; _aihecong_chat_visibility=false',
+  'accept-language' => 'zh-CN,zh;q=0.9',
+  'accept-encoding' => 'gzip, deflate, br',
+  'referer' => 'http://localhost/Jshop_mall-master/',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+  'user-agent' => 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36',
+  'upgrade-insecure-requests' => '1',
+  'connection' => 'close',
+  'host' => 'localhost',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2018-11-03T11:33:13+08:00 ] 0.0.0.0 GET /Jshop_mall-master/public/
+[ info ] localhost/Jshop_mall-master/public/ [运行时间：0.041505s][吞吐率：24.09req/s] [内存消耗：1,075.66kb] [文件加载：92]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run app\common\behavior\InitHooks->run @app_init [ RunTime:0.013002s ]
+[ info ] [ LANG ] D:\www\Jshop_mall-master\thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=j8f38tfpl0dn5689nbl9acnii2; _aihecong_chat_visibility=false',
+  'accept-language' => 'zh-CN,zh;q=0.9',
+  'accept-encoding' => 'gzip, deflate, br',
+  'referer' => 'http://localhost/Jshop_mall-master/',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+  'user-agent' => 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36',
+  'upgrade-insecure-requests' => '1',
+  'connection' => 'close',
+  'host' => 'localhost',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2018-11-03T11:37:36+08:00 ] 0.0.0.0 GET /Jshop_mall-master/public/
+[ info ] localhost/Jshop_mall-master/public/ [运行时间：0.032004s][吞吐率：31.25req/s] [内存消耗：1,075.66kb] [文件加载：92]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run app\common\behavior\InitHooks->run @app_init [ RunTime:0.010002s ]
+[ info ] [ LANG ] D:\www\Jshop_mall-master\thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=j8f38tfpl0dn5689nbl9acnii2; _aihecong_chat_visibility=false',
+  'accept-language' => 'zh-CN,zh;q=0.9',
+  'accept-encoding' => 'gzip, deflate, br',
+  'referer' => 'http://localhost/Jshop_mall-master/',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+  'user-agent' => 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36',
+  'upgrade-insecure-requests' => '1',
+  'connection' => 'close',
+  'host' => 'localhost',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LOG ] INIT File
+---------------------------------------------------------------
+[ 2018-11-03T11:42:42+08:00 ] 0.0.0.0 GET /jsshop/public/
+[ info ] localhost/jsshop/public/ [运行时间：0.020503s][吞吐率：48.77req/s] [内存消耗：1,073.03kb] [文件加载：92]
+[ info ] [ CACHE ] INIT File
+[ info ] [ BEHAVIOR ] Run app\common\behavior\InitHooks->run @app_init [ RunTime:0.005001s ]
+[ info ] [ LANG ] D:\www\jsshop\thinkphp/lang/zh-cn.php
+[ info ] [ ROUTE ] array (
+)
+[ info ] [ HEADER ] array (
+  'cookie' => 'PHPSESSID=j8f38tfpl0dn5689nbl9acnii2; _aihecong_chat_visibility=false',
+  'accept-language' => 'zh-CN,zh;q=0.9',
+  'accept-encoding' => 'gzip, deflate, br',
+  'referer' => 'http://localhost/jsshop/',
+  'accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+  'user-agent' => 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36',
+  'upgrade-insecure-requests' => '1',
+  'connection' => 'close',
+  'host' => 'localhost',
+)
+[ info ] [ PARAM ] array (
+)
+[ info ] [ LOG ] INIT File
