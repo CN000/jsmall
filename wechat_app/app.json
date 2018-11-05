@@ -43,8 +43,8 @@
   ],
   "window": {
     "backgroundTextStyle":"light",
-    "navigationBarBackgroundColor": "#fff",
-    "navigationBarTitleText": "JShop云商",
+    "navigationBarBackgroundColor": "#32cd32",
+    "navigationBarTitleText": "三穗鸭",
     "navigationBarTextStyle":"black"
   },
   "tabBar": {
