@@ -13,7 +13,7 @@
 //    return 'hello,ThinkPHP5!';
 //});
 //
-Route::get('hello/:id', 'index/Index/index');
+Route::rule('hello/:id', 'index/Index/index');
 
 //Route::rule('new/:id','index/Index/index');
 

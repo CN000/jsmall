@@ -16,7 +16,7 @@ class Index extends Api
     {
         //解决跨域问题
         header('Access-Control-Allow-Origin:*');//允许所有来源访问
-        header('Access-Control-Allow-Method:POST,GET');//允许访问的方式
+        header('Access-Control-Allow-Method:POST');//允许访问的方式
         $result = [
             'status' => false,
             'data' => '',
@@ -24,6 +24,7 @@ class Index extends Api
         ];
         $api = config('api.');
         $method = explode('.',input('param.method'));
+
         if(count($method) != 2){
             return error_code(14002);
         }

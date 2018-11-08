@@ -71,8 +71,9 @@ const ApiUrl = () => {
     let apiUrl
     if (process.env.NODE_ENV === 'development') {
         // 开发环境
-        apiUrl = 'http://192.168.1.116/index.php/api.html'
-        // apiUrl = 'https://b2c.jihainet.com/api.html'
+        // apiUrl = 'http://jsmall-demo.facecube.com.cn/api.html'
+        apiUrl = 'https://b2c.jihainet.com/api.html'
+        // apiUrl = 'http://www.jshop.com/api.html'
     } else if (process.env.NODE_ENV === 'production') {
         // 生产环境
         if (!window.apiUrl) common.errorToBack('缺少配置参数!')

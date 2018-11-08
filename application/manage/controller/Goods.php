@@ -152,7 +152,9 @@ class Goods extends Manage
             //多规格
             $product     = input('post.product/a', []);
             $total_stock = $price = $costprice = $mktprice = 0;
-            $isExitDefalut = false;
+//            $isExitDefalut = false;
+            $isExitDefalut = true;
+
             foreach ($product as $key => $val) {
                 $tmp_product['goods']['price']        = isset($val['price']) ? $val['price'] : 0;
                 $tmp_product['goods']['costprice']    = isset($val['costprice']) ? $val['costprice'] : 0;
