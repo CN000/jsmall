@@ -1,3 +1,4 @@
 .idea/
+.idea/workspace.xml
 runtime
 public/install/install.lock
