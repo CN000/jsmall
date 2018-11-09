@@ -1,8 +1,8 @@
 <?php
 // +----------------------------------------------------------------------
-// | JSHOP [ 小程序 ]
+// | JSHOP [ 小程序商城 ]
 // +----------------------------------------------------------------------
-// | Copyright (c) 2017~2018 http://jihainet.com All rights reserved.
+// | Copyright (c) 2018 http://jihainet.com All rights reserved.
 // +----------------------------------------------------------------------
 // | Author: mark <jima@jihainet.com>
 // +----------------------------------------------------------------------
@@ -128,7 +128,6 @@ class Ietask extends Manage{
             ];
             $ietaskModle = new ietaskModel();
 
-            $data['seller_id'] = $this->sellerId;
             $data['name'] = $model . '-导入';
             $data['type'] = $ietaskModle::TYPE_INPORT;
             $data['params'] = json_encode($params);

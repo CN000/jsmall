@@ -51,9 +51,6 @@ class Promotion extends Manage
     {
 
         if(Request::isPost()){
-            if(!input('?param.seller_id')){
-                return error_code(10011);
-            }
             if(!input('?param.name')){
                 return error_code(15001);
             }
@@ -71,7 +68,6 @@ class Promotion extends Manage
             $data['status'] = input('param.status/d',1);
             $data['sort'] = input('param.sort/d',100);
             $data['exclusive'] = input('param.exclusive/d',1);
-            $data['seller_id'] = input('param.seller_id/d');
             $promotionModel = new PromotionModel();
             $id = $promotionModel->insertGetId($data);
             return [
@@ -86,9 +82,6 @@ class Promotion extends Manage
     public function couponAdd()
     {
         if(Request::isPost()){
-            if(!input('?param.seller_id')){
-                return error_code(10011);
-            }
             if(!input('?param.name')){
                 return error_code(15001);
             }
@@ -108,7 +101,6 @@ class Promotion extends Manage
             $data['auto_receive'] = input('param.auto_receive/d',2);
             $data['sort'] = input('param.sort/d',100);
             $data['type'] = $promotionModel::TYPE_COUPON;
-            $data['seller_id'] = input('param.seller_id/d');
 
             $id = $promotionModel->insertGetId($data);
             return [
@@ -292,18 +284,16 @@ class Promotion extends Manage
             return error_code(10002);
         }
 
-
         $conditionModel = new PromotionCondition();
 
         if(Request::isPOST()){
             $data = input('param.');
-            $data['seller_id'] = $pinfo['seller_id'];
             return $conditionModel->addData($data);
         }
 
         //如果是修改，就取数据，否则就是新增，直接渲染模板
         if(input('?param.id')){
-            $info = $conditionModel->getInfo(input('param.id'),$pinfo['seller_id']);
+            $info = $conditionModel->getInfo(input('param.id'));
             if(!$info){
                 return error_code(15004);
             }
@@ -313,14 +303,13 @@ class Promotion extends Manage
             $code = input('param.condition_code');
             $this->assign('promotion_id',input('param.promotion_id/d'));
             $this->assign('code',$code);
-            $this->assign('seller_id',$pinfo['seller_id']);
         }
 
         //初始化数据
         switch ($code){
             case 'GOODS_CATS':
                 $goodsCatModel = new GoodsCat();
-                $catList       = $goodsCatModel->getCatByParentId(0, $pinfo['seller_id']);
+                $catList       = $goodsCatModel->getCatByParentId(0);
                 $this->assign('catList', $catList);
 
                 break;
@@ -345,7 +334,7 @@ class Promotion extends Manage
         }
 
         $conditionModel = new PromotionCondition();
-        return $conditionModel->toDel(input('param.id'),$info['seller_id']);
+        return $conditionModel->toDel(input('param.id'));
     }
 
     //促销结果列表
@@ -403,13 +392,12 @@ class Promotion extends Manage
 
 
         if(Request::isPOST()){$data = input('param.');
-            $data['seller_id'] = $info['seller_id'];
             return $resultModel->addData($data);
         }
 
         //如果是修改，就取数据，否则就是新增，直接渲染模板
         if(input('?param.id')){
-            $info = $resultModel->getInfo(input('param.id'),$info['seller_id']);
+            $info = $resultModel->getInfo(input('param.id'));
             if(!$info){
                 return error_code(15004);
             }
@@ -440,7 +428,117 @@ class Promotion extends Manage
         }
 
         $resultModel = new PromotionResult();
-        return $resultModel->toDel(input('param.id'),$info['seller_id']);
+        return $resultModel->toDel(input('param.id'));
     }
 
+    //优惠券下载
+    public function couponUpload()
+    {
+        if(!input('?param.id')){
+            return error_code(10000);
+        }
+
+
+
+        $this->assign('id',input('param.id'));
+        return [
+            'status' => true,
+            'data' => $this->fetch('resultAdd'),
+            'msg' => ''
+        ];
+    }
+
+
+    /**
+     * @return mixed
+     */
+    public function group()
+    {
+        if(Request::isAjax()) {
+            $promotionModel = new PromotionModel();
+            $request = input('param.');
+            $request['type'] = $promotionModel::TYPE_GROUP;
+
+            return $promotionModel->tableData($request);
+        }
+        return $this->fetch();
+    }
+
+    //添加团购秒杀
+    public function groupAdd()
+    {
+        if (Request::isPost()) {
+            if (!input('?param.name')) {
+                return error_code(15001);
+            }
+            if (!input('?param.date') || !input('param.date')) {
+                return error_code(15002);
+            } else {
+                $theDate = explode(' 到 ', input('param.date'));
+                if (count($theDate) != 2) {
+                    return error_code(15002);
+                }
+            }
+            $promotionModel = new PromotionModel();
+            $data['name']   = input('param.name');
+            $data['stime']  = strtotime($theDate[0]);
+            $data['etime']  = strtotime($theDate[1]);
+            $data['status'] = input('param.status/d', 1);
+            $data['sort']   = input('param.sort/d', 100);
+            $data['type']   = input('param.type/d', 3);
+            $data['params'] = json_encode(input('param.params/a', []));
+            $id             = $promotionModel->insertGetId($data);
+            return [
+                'status' => true,
+                'data'   => url('promotion/groupEdit', ['id' => $id]),
+                'msg'    => '',
+            ];
+        }
+        return $this->fetch('groupAdd');
+    }
+
+    //编辑团购（秒杀）
+    public function groupEdit()
+    {
+        $promotionModel = new PromotionModel();
+        $where[] = ['id','=',input('param.id/d','0')];
+
+        $where[] = ['type','in',[$promotionModel::TYPE_GROUP,$promotionModel::TYPE_SKILL]];
+        $info = $promotionModel->where($where)->find();
+
+        if(!$info){
+            $this->error('没有找到此促销记录');
+        }
+
+        if(Request::isPost()){
+            if(!input('?param.name')){
+                return error_code(15001);
+            }
+            if(!input('?param.date') || !input('param.date')){
+                return error_code(15002);
+            }else{
+                $theDate = explode(' 到 ',input('param.date'));
+                if(count($theDate) != 2){
+                    return error_code(15002);
+                }
+            }
+            $data['name'] = input('param.name');
+            $data['stime'] = strtotime($theDate[0]);
+            $data['etime'] = strtotime($theDate[1]);
+            $data['status'] = input('param.status/d',2);
+            $data['sort'] = input('param.sort/d',100);
+            $data['exclusive'] = input('param.exclusive/d',1);
+            $promotionModel = new PromotionModel();
+            $id = $promotionModel->where($where)->update($data);
+            return [
+                'status' => true,
+                'data' => url('promotion/edit',['id'=>$id]),
+                'msg' => ''
+            ];
+        }
+        $info['params'] = json_decode($info['params'],true);
+        $this->assign('info',$info);
+
+        return $this->fetch('groupEdit');
+    }
 }

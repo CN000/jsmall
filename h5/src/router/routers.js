@@ -1,4 +1,3 @@
-
 /**
  *      path         页面路由地址
  *      navShow      是否显示页面头部
@@ -7,8 +6,7 @@
  *      keepAlive    是否缓存页面
  *      @type {*[]}
  */
-const routers = [
-    {
+const routers = [{
         path: '/',
         redirect: '/index'
     },
@@ -27,7 +25,7 @@ const routers = [
         component: resolve => require(['../pages/Classify'], resolve),
         name: 'Classify',
         meta: {
-            navShow: false,
+            navShow: true,
             tabShow: true,
             title: '全部分类',
             keepAlive: true
@@ -35,7 +33,7 @@ const routers = [
     },
     {
         path: '/cart',
-        component: resolve => require(['../pages/Cart'], resolve),
+        component: resolve => require(['../pages/cart/Cart'], resolve),
         name: 'Cart',
         meta: {
             navShow: true,
@@ -59,7 +57,7 @@ const routers = [
     },
     {
         path: '/login',
-        component: resolve => require(['../pages/Login'], resolve),
+        component: resolve => require(['../pages/login/Login'], resolve),
         name: 'Login',
         meta: {
             navShow: true,
@@ -70,7 +68,7 @@ const routers = [
     },
     {
         path: '/goodslist',
-        component: resolve => require(['../pages/GoodsList'], resolve),
+        component: resolve => require(['../pages/goods/GoodsList'], resolve),
         name: 'GoodsList',
         meta: {
             navShow: true,
@@ -81,7 +79,7 @@ const routers = [
     },
     {
         path: '/goodsdetail',
-        component: resolve => require(['../pages/GoodsDetail'], resolve),
+        component: resolve => require(['../pages/goods/GoodsDetail'], resolve),
         name: 'GoodsDetail',
         meta: {
             navShow: false,
@@ -92,7 +90,7 @@ const routers = [
     },
     {
         path: '/firmorder',
-        component: resolve => require(['../pages/FirmOrder'], resolve),
+        component: resolve => require(['../pages/order/FirmOrder'], resolve),
         name: 'FirmOrder',
         meta: {
             tabShow: false,
@@ -104,7 +102,7 @@ const routers = [
     },
     {
         path: '/cashierdesk',
-        component: resolve => require(['../pages/CashierDesk'], resolve),
+        component: resolve => require(['../pages/order/CashierDesk'], resolve),
         name: 'CashierDesk',
         meta: {
             tabShow: false,
@@ -115,9 +113,10 @@ const routers = [
     },
     {
         path: '/allorder',
-        component: resolve => require(['../pages/AllOrder'], resolve),
+        component: resolve => require(['../pages/order/AllOrder'], resolve),
         name: 'AllOrder',
         meta: {
+            navShow: true,
             tabShow: false,
             title: '订单列表',
             keepAlive: false,
@@ -126,7 +125,7 @@ const routers = [
     },
     {
         path: '/orderdetail',
-        component: resolve => require(['../pages/OrderDetail'], resolve),
+        component: resolve => require(['../pages/order/OrderDetail'], resolve),
         name: 'OrderDetail',
         meta: {
             tabShow: false,
@@ -137,7 +136,7 @@ const routers = [
     },
     {
         path: '/afterservice',
-        component: resolve => require(['../pages/AfterService'], resolve),
+        component: resolve => require(['../pages/order/AfterService'], resolve),
         name: 'AfterService',
         meta: {
             tabShow: false,
@@ -148,7 +147,7 @@ const routers = [
     },
     {
         path: '/allafterservice',
-        component: resolve => require(['../pages/AllAfterService'], resolve),
+        component: resolve => require(['../pages/order/AllAfterService'], resolve),
         name: 'AllAfterService',
         meta: {
             tabShow: false,
@@ -159,7 +158,7 @@ const routers = [
     },
     {
         path: '/collect',
-        component: resolve => require(['../pages/Collect'], resolve),
+        component: resolve => require(['../pages/other/Collect'], resolve),
         name: 'Collect',
         meta: {
             navShow: true,
@@ -172,7 +171,7 @@ const routers = [
     },
     {
         path: '/history',
-        component: resolve => require(['../pages/History'], resolve),
+        component: resolve => require(['../pages/other/History'], resolve),
         name: 'History',
         meta: {
             navShow: true,
@@ -184,7 +183,7 @@ const routers = [
     },
     {
         path: '/notice',
-        component: resolve => require(['../pages/Notice'], resolve),
+        component: resolve => require(['../pages/other/Notice'], resolve),
         name: 'Notice',
         meta: {
             tabShow: false,
@@ -194,7 +193,7 @@ const routers = [
     },
     {
         path: '/article',
-        component: resolve => require(['../pages/Article'], resolve),
+        component: resolve => require(['../pages/article/Article'], resolve),
         name: 'Article',
         meta: {
             tabShow: false,
@@ -216,7 +215,7 @@ const routers = [
     },
     {
         path: '/evaluate',
-        component: resolve => require(['../pages/Evaluate'], resolve),
+        component: resolve => require(['../pages/order/Evaluate'], resolve),
         name: 'Evaluate',
         meta: {
             tabShow: false,
@@ -227,7 +226,7 @@ const routers = [
     },
     {
         path: '/datasetting',
-        component: resolve => require(['../pages/DataSetting'], resolve),
+        component: resolve => require(['../pages/setting/DataSetting'], resolve),
         name: 'DataSetting',
         meta: {
             navShow: true,
@@ -239,7 +238,7 @@ const routers = [
     },
     {
         path: '/aftersalesdetail',
-        component: resolve => require(['../pages/AfterSalesDetail'], resolve),
+        component: resolve => require(['../pages/order/AfterSalesDetail'], resolve),
         name: 'AfterSalesDetail',
         meta: {
             tabShow: false,
@@ -250,7 +249,7 @@ const routers = [
     },
     {
         path: '/searchpage',
-        component: resolve => require(['../pages/SearchPage'], resolve),
+        component: resolve => require(['../pages/search/SearchPage'], resolve),
         name: 'SearchPage',
         meta: {
             tabShow: false,
@@ -260,7 +259,7 @@ const routers = [
     },
     {
         path: '/address',
-        component: resolve => require(['../pages/Address'], resolve),
+        component: resolve => require(['../pages/address/Address'], resolve),
         name: 'Address',
         meta: {
             navShow: true,
@@ -272,7 +271,7 @@ const routers = [
     },
     {
         path: '/addresslist',
-        component: resolve => require(['../pages/AddressList'], resolve),
+        component: resolve => require(['../pages/address/AddressList'], resolve),
         name: 'AddressList',
         meta: {
             navShow: true,
@@ -284,7 +283,7 @@ const routers = [
     },
     {
         path: '/balance',
-        component: resolve => require(['../pages/Balance'], resolve),
+        component: resolve => require(['../pages/balance/Balance'], resolve),
         name: 'Balance',
         meta: {
             navShow: true,
@@ -295,7 +294,7 @@ const routers = [
     },
     {
         path: '/balancelist',
-        component: resolve => require(['../pages/BalanceList'], resolve),
+        component: resolve => require(['../pages/balance/BalanceList'], resolve),
         name: 'BalanceList',
         meta: {
             navShow: true,
@@ -306,7 +305,7 @@ const routers = [
     },
     {
         path: '/withdrawcash',
-        component: resolve => require(['../pages/WithDrawCash'], resolve),
+        component: resolve => require(['../pages/balance/WithDrawCash'], resolve),
         name: 'WithDrawCash',
         meta: {
             navShow: true,
@@ -317,7 +316,7 @@ const routers = [
     },
     {
         path: '/bankcard',
-        component: resolve => require(['../pages/BankCard'], resolve),
+        component: resolve => require(['../pages/balance/BankCard'], resolve),
         name: 'BankCard',
         meta: {
             navShow: true,
@@ -328,7 +327,7 @@ const routers = [
     },
     {
         path: '/mybankcardlist',
-        component: resolve => require(['../pages/MyBankCardList'], resolve),
+        component: resolve => require(['../pages/balance/MyBankCardList'], resolve),
         name: 'MyBankCardList',
         meta: {
             navShow: true,
@@ -350,7 +349,7 @@ const routers = [
     },
     {
         path: '/recommendlist',
-        component: resolve => require(['../pages/RecommendList'], resolve),
+        component: resolve => require(['../pages/share/RecommendList'], resolve),
         name: 'RecommendList',
         meta: {
             navShow: true,
@@ -361,7 +360,7 @@ const routers = [
     },
     {
         path: '/share',
-        component: resolve => require(['../pages/Share'], resolve),
+        component: resolve => require(['../pages/share/Share'], resolve),
         name: 'Share',
         meta: {
             navShow: true,
@@ -372,7 +371,7 @@ const routers = [
     },
     {
         path: '/cashlist',
-        component: resolve => require(['../pages/CashList'], resolve),
+        component: resolve => require(['../pages/balance/CashList'], resolve),
         name: 'CashList',
         meta: {
             navShow: true,
@@ -383,7 +382,7 @@ const routers = [
     },
     {
         path: '/setting',
-        component: resolve => require(['../pages/Setting'], resolve),
+        component: resolve => require(['../pages/setting/Setting'], resolve),
         name: 'Setting',
         meta: {
             navShow: true,
@@ -394,7 +393,7 @@ const routers = [
     },
     {
         path: '/register',
-        component: resolve => require(['../pages/Register'], resolve),
+        component: resolve => require(['../pages/register/Register'], resolve),
         name: 'Register',
         meta: {
             navShow: true,
@@ -405,7 +404,7 @@ const routers = [
     },
     {
         path: '/articlelist',
-        component: resolve => require(['../pages/ArticleList'], resolve),
+        component: resolve => require(['../pages/article/ArticleList'], resolve),
         name: 'ArticleList',
         meta: {
             navShow: true,

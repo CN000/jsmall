@@ -308,8 +308,8 @@ class User extends Common
 
         if ($type == 1)
         {
-            $userLogModel = new UserLog();        //添加登录日志
-            $userLogModel->setLog($userInfo['id'],$userLogModel::USER_LOGIN);
+            //$userLogModel = new UserLog();        //添加登录日志
+            //$userLogModel->setLog($userInfo['id'],$userLogModel::USER_LOGIN);
         }
 
         return $result;
@@ -339,8 +339,8 @@ class User extends Common
         }
         $re = $this->save($data,['id'=>$id]);
         if($re){
-            $userLogModel = new UserLog();
-            $userLogModel->setLog($id,$userLogModel::USER_EDIT);
+            //$userLogModel = new UserLog();
+            //$userLogModel->setLog($id,$userLogModel::USER_EDIT);
             $result['status'] = true;
             $result['msg'] = '保存成功';
             return $result;
@@ -405,9 +405,6 @@ class User extends Common
             }
             if($v['status']) {
                 $list[$k]['status'] = config('params.user')['status'][$v['status']];
-            }
-            if($v['mobile']) {
-                $list[$k]['mobile'] = format_mobile($v['mobile']);
             }
         }
         return $list;
@@ -558,4 +555,58 @@ class User extends Common
         ];
     }
 
+
+    /**
+     * 获取用户的积分
+     * @param $user_id
+     * @param int $order_money
+     * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function getUserPoint($user_id, $order_money = 0)
+    {
+        $return = [
+            'status' => false,
+            'msg' => '获取失败',
+            'data' => 0,
+            'available_point' => 0,
+            'point_rmb' => 0,
+            'switch' => 1
+        ];
+
+
+        $settingModel = new Setting();
+        $switch = $settingModel->getValue('point_switch');
+        if($switch == 2)
+        {
+            $return['status'] = true;
+            $return['switch'] = 2;
+            return $return;
+        }
+
+        $where[] = ['id', 'eq', $user_id];
+        $data = $this->field('point')->where($where)->find();
+        if($data !== false)
+        {
+            if($order_money != 0)
+            {
+                //计算可用积分
+                $settingModel = new Setting();
+                $orders_point_proportion = $settingModel->getValue('orders_point_proportion'); //订单积分使用比例
+                $max_point_deducted_money = $order_money*($orders_point_proportion/100); //最大积分抵扣的钱
+                $point_discounted_proportion = $settingModel->getValue('point_discounted_proportion'); //积分兑换比例
+                $needs_point = $max_point_deducted_money*$point_discounted_proportion;
+                $return['available_point'] = $needs_point>$data['point']?$data['point']:$needs_point;
+                $return['point_rmb'] = $max_point_deducted_money;
+            }
+
+            $return['msg'] = '获取成功';
+            $return['data'] = $data['point'];
+            $return['status'] = true;
+        }
+
+        return $return;
+    }
 }

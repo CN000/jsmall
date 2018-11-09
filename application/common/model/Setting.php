@@ -86,6 +86,10 @@ class Setting extends Common
             'name' => '单日最大奖励',
             'value' => 10
         ],
+        'point_switch' => [
+            'name' => '开启积分功能',
+            'value' => 1
+        ],
         'point_discounted_proportion' => [
             'name' => '订单积分折现比例',
             'value' => 100
@@ -147,7 +151,23 @@ class Setting extends Common
         'wx_head_img'=>[
             'name'=>'Logo',
             'value'=>''
-        ]
+        ],
+        'sms_user_id' => [
+            'name' => '短信通道用户ID',
+            'value' => ''
+        ],
+        'sms_account' => [
+            'name' => '短信通道用户名',
+            'value' => ''
+        ],
+        'sms_password' => [
+            'name' => '短信通道用户密码',
+            'value' => ''
+        ],
+        'sms_prefix' => [
+            'name' => '短信前缀',
+            'value' => 'Jshop'
+        ],
     ];
 
 

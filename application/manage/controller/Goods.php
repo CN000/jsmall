@@ -1,8 +1,8 @@
 <?php
 // +----------------------------------------------------------------------
-// | JSHOP [ 小程序 ]
+// | JSHOP [ 小程序商城 ]
 // +----------------------------------------------------------------------
-// | Copyright (c) 2017~2018 http://jihainet.com All rights reserved.
+// | Copyright (c) 2018 http://jihainet.com All rights reserved.
 // +----------------------------------------------------------------------
 // | Author: mark <jima@jihainet.com>
 // +----------------------------------------------------------------------
@@ -84,6 +84,9 @@ class Goods extends Manage
         $brandModel = new Brand();
         $brandList  = $brandModel->getAllBrand();
         $this->assign('brandList', $brandList);
+
+        hook('goodscommon', $this);//商品编辑、添加时增加钩子
+
     }
 
     /**
@@ -136,7 +139,6 @@ class Goods extends Manage
             return $result;
         }
         $data = $checkData['data'];
-
         //验证商品数据
         $goodsModel    = new goodsModel();
         $productsModel = new Products();
@@ -152,9 +154,7 @@ class Goods extends Manage
             //多规格
             $product     = input('post.product/a', []);
             $total_stock = $price = $costprice = $mktprice = 0;
-//            $isExitDefalut = false;
-            $isExitDefalut = true;
-
+            $isExitDefalut = false;
             foreach ($product as $key => $val) {
                 $tmp_product['goods']['price']        = isset($val['price']) ? $val['price'] : 0;
                 $tmp_product['goods']['costprice']    = isset($val['costprice']) ? $val['costprice'] : 0;
@@ -240,6 +240,10 @@ class Goods extends Manage
             }
         }
         $goodsModel->commit();
+
+        array_push($data,['goods_id'=>$goods_id]);
+        hook('addgoodsafter', $data);//添加商品后增加钩子
+
         $result['msg']    = '保存成功';
         $result['status'] = true;
         return $result;
@@ -260,7 +264,9 @@ class Goods extends Manage
         ];
         $bn                             = get_sn(3);
         $data['goods']['name']          = input('post.goods.name', '');
-        $data['goods']['goods_cat_id']  = input('post.goods_cat_id.0', 0);
+        $goods_cat_id                   = input('post.goods_cat_id/a');
+        $goods_cat_id                   = array_filter($goods_cat_id);
+        $data['goods']['goods_cat_id']  = $goods_cat_id[count($goods_cat_id)-1];
         $data['goods']['goods_type_id'] = input('post.goods_type_id', 0);
         $data['goods']['brand_id']      = input('post.goods.brand_id', 0);
         $data['goods']['bn']            = input('post.goods.bn', $bn);
@@ -432,7 +438,6 @@ class Goods extends Manage
             $goodsTypeParamsModel = new GoodsTypeParams();
             $typeParams           = $goodsTypeParamsModel->getRelParams($type_id);
             $this->assign('typeParams', $typeParams);
-            //print_r($typeParams);die();
             $html             = $this->fetch('getSpec');
             $result['status'] = true;
             $result['msg']    = '获取成功';
@@ -456,10 +461,10 @@ class Goods extends Manage
             'data'   => '',
         ];
         $this->view->engine->layout(false);
-        $spec     = input('post.spec/a');
-        $goods_id = input('post.goods_id/d', 0);
-        $goods    = input('post.goods/a', []);
-        $products = [];
+        $spec         = input('post.spec/a');
+        $goods_id     = input('post.goods_id/d', 0);
+        $goodsDefault = input('post.goods/a', []);
+        $products     = [];
         if ($goods_id) {
             $goodsModel = new goodsModel();
             $goods      = $goodsModel->getOne($goods_id, 'id,image_id');
@@ -476,12 +481,15 @@ class Goods extends Manage
             }
             $items = $this->getSkuItem($spec, -1);
             foreach ((array)$items as $key => $val) {
-                $items[$key]['price']     = $goods['price'];
-                $items[$key]['costprice'] = $goods['costprice'];
-                $items[$key]['mktprice']  = $goods['mktprice'];
-                $items[$key]['sn']        = $goods['sn'] . '-' . ($key + 1);
-                $items[$key]['stock']     = $goods['stock'];
+                $items[$key]['price']     = $goodsDefault['price'];
+                $items[$key]['costprice'] = $goodsDefault['costprice'];
+                $items[$key]['mktprice']  = $goodsDefault['mktprice'];
+                if (isset($goodsDefault['sn']) && $goodsDefault['sn']) {
+                    $items[$key]['sn'] = $goodsDefault['sn'] . '-' . ($key + 1);
+                }
+                $items[$key]['stock'] = $goodsDefault['stock'];
             }
+
             if ($products) {
                 foreach ($items as $key => $val) {
                     foreach ($products as $product) {
@@ -581,10 +589,13 @@ class Goods extends Manage
         $res            = $this->getEditSpec($goods['data']['goods_type_id'], $goods['data']);
         $this->assign('spec_html', $res['data']);
         $goodsCatModel = new GoodsCat();
-        $catInfo       = $goodsCatModel->getCatInfo($goods['data']['goods_cat_id']);
-        $this->assign('catInfo', $catInfo);
-        $childCat = $goodsCatModel->getCatByParentId($catInfo['parent_id']);
-        $this->assign('childCat', $childCat);
+
+        $catInfo       = $goodsCatModel->getCatByLastId($goods['data']['goods_cat_id']);
+        $catInfo = _krsort($catInfo);
+        $this->assign('catInfo',$catInfo);
+
+        $secondCat = $goodsCatModel->getCatByParentId($catInfo[0]['id']);
+        $this->assign('secondCat', $secondCat);
 
         $this->_common();
         return $this->fetch('edit');
@@ -606,6 +617,7 @@ class Goods extends Manage
             $result['msg'] = $checkData['msg'];
             return $result;
         }
+
         $data = $checkData['data'];
         //验证商品数据
         $goodsModel    = new goodsModel();
@@ -623,12 +635,17 @@ class Goods extends Manage
         $productIds = array_column($products, 'id');
 
         $open_spec = input('post.open_spec', 0);
+
         if ($open_spec) {
             //多规格
             $product     = input('post.product/a', []);
             $total_stock = $price = $costprice = $mktprice = 0;
             $isExitDefalut = false;
             $exit_product = [];
+            if(isset($product['id'])&&$product['id']){
+                unset($product['id']);
+            }
+
             foreach ($product as $key => $val) {
                 $tmp_product['goods']['price']        = !empty($val['price']) ? $val['price'] : 0;
                 $tmp_product['goods']['costprice']    = !empty($val['costprice']) ? $val['costprice'] : 0;
@@ -642,6 +659,7 @@ class Goods extends Manage
                 if($tmp_product['goods']['is_defalut'] == $productsModel::DEFALUT_YES ){
                     $isExitDefalut = true;
                 }
+
                 if (isset($val['id'])) {
                     $tmp_product['product']['id'] = $val['id'];
                     $checkData                    = $this->checkProductInfo($tmp_product, $goods_id, true);
@@ -656,7 +674,7 @@ class Goods extends Manage
                 }
                 $data['product'] = $checkData['data']['product'];
 
-                if (isset($val['id'])) {
+                if (isset($val['id'])&&$val['id']) {
                     $productRes = $productsModel->updateProduct($val['id'], $data['product']);
                     if (in_array($val['id'], $productIds)) {
                         $productIds = unsetByValue($productIds, $val['id']);
@@ -664,8 +682,8 @@ class Goods extends Manage
                     if($val['id']){
                         $exit_product[] = $val['id'];
                     }
-
                 } else {
+                    unset($data['product']['id']);
                     $productRes = $productsModel->doAdd($data['product']);
                     if(is_numeric($productRes)){
                         $exit_product[] = $productRes;
@@ -755,6 +773,7 @@ class Goods extends Manage
             }
         }
         $goodsModel->commit();
+        hook('editgoodsafter', $data);//编辑商品后增加钩子
         $result['msg']    = '保存成功';
         $result['status'] = true;
         return $result;
