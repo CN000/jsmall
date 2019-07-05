@@ -4,7 +4,7 @@
             <img src="../../../static/image/group14.png"/>
         </div>
         <!--<yd-cell-group>-->
-        <yd-tab v-model="tab" :prevent-default="false" :item-click="itemClick">
+        <yd-tab v-model="tab" :prevent-default="false" :item-click="itemClick" v-if="!isWeiXinBrowser">
             <yd-tab-panel label="账号登陆">
                 <div class="login-content">
                     <yd-cell-item>
@@ -42,32 +42,33 @@
                 </div>
             </yd-tab-panel>
             <yd-button size="large" type="danger" @click.native="login">登录</yd-button>
-            <div v-if="authList.length">
-                <div v-for="(item, index) in authList" :key="index">
-                    <div class="wechat-login" v-for="(child, key) in item" :key="key">
-                        <img src="https://b2c.jihainet.com/static/images/wechat_login.png" alt="" @click="toAuth(child.url)">
-                    </div>
+            没有账号?<span style="color: #10aeff;" @click="toRegister">&nbsp;立即注册</span>
+        </yd-tab>
+        <div v-if="authList.length">
+            <div v-for="(item, index) in authList" :key="index">
+                <div class="wechat-login" v-for="(child, key) in item" :key="key">
+                    <yd-button size="large" type="primary" @click.native="toAuth(child.url)" v-if="key === 'weixin'">微信登录</yd-button>
                 </div>
             </div>
-        </yd-tab>
+        </div>
         <!--</yd-cell-group>-->
-        没有账号?<span style="color: #10aeff;" @click="toRegister">&nbsp;立即注册</span>
+
     </div>
 </template>
 
 <script>
-import axios from 'axios'
+import { host } from "../../common/serviceUrl"
 export default {
     data () {
         return {
             tab: parseInt(this.GLOBAL.getStorage('loginType')) || 0,
-            pid: '', // 邀请码
+            invitecode: this.GLOBAL.getStorage('invitecode') || '', // 邀请码
             mobile: null,
             password: null,
             code: null, // 短信验证码
             isShowCaptcha: false, // 是否需要登录验证码
             captcha: '', // 用户输入的验证码
-            localCaptcha: this.GLOBAL.getCaptcha(), // 验证码图片
+            localCaptcha: '', // 登录次数过多验证码图片
             countDown: false, // 发送验证码倒计时 发送成功后修改为true倒计时启动
             authList: []
         }
@@ -82,19 +83,10 @@ export default {
                 }
             })
         }
-        // 如果localStorage的pid存在
-        if (this.GLOBAL.getStorage('pid')) {
-            // 判断pid的最大时间是否超过24小时
-            // 如果超过24小时  移除pid
-            // 否则 赋值this.pid
-            if (parseInt(this.GLOBAL.getStorage('time')) < new Date().getTime()) {
-                this.GLOBAL.removeStorage('pid')
-                this.GLOBAL.removeStorage('time')
-            } else {
-                this.pid = this.GLOBAL.getStorage('pid')
-            }
+        // 判断是否是微信浏览器
+        if (this.isWeiXinBrowser) {
+            this.getAuth()
         }
-        this.getAuth()
     },
     computed: {
         // 验证手机号
@@ -110,6 +102,9 @@ export default {
                 res.status = true
             }
             return res
+        },
+        isWeiXinBrowser () {
+            return this.GLOBAL.isWeiXinBrowser()
         }
     },
     methods: {
@@ -140,18 +135,26 @@ export default {
             if (!this.rightMobile.status) {
                 this.$dialog.toast({mes: this.rightMobile.msg, timeout: 1000})
             } else {
-                // 账号密码登录
                 if (!this.tab) {
+                    // 账号密码登录
                     if (!this.password) {
                         this.$dialog.toast({mes: '请输入密码!', timeout: 1000})
                     } else {
-                        this.$api.login({mobile: this.mobile, password: this.password}, res => {
+                        let data = {
+                            mobile: this.mobile,
+                            password: this.password
+                        }
+                        // 判断是否需要验证码登录
+                        if (this.isShowCaptcha) {
+                            data['captcha'] = this.captcha
+                        }
+                        this.$api.login(data, res => {
                             if (res.status) {
                                 this.GLOBAL.setStorage('user_token', res.data)
                                 this.redirectHandler()
                             } else {
-                                // 需要输入验证码
-                                if (res.data === 10013) {
+                                // 需要输入验证码 或者 验证码错误刷新
+                                if (res.data === 10013 || res.data === 10012) {
                                     this.isShowCaptcha = true
                                 }
                                 // 密码错误刷新
@@ -166,15 +169,9 @@ export default {
                     if (!this.code) {
                         this.$dialog.toast({mes: '请输入短信验证码!', timeout: 1000})
                     } else {
-                        let data = {mobile: this.mobile, code: this.code}
-                        if (this.pid) {
-                            data['pid'] = this.pid
-                        }
+                        let data = {mobile: this.mobile, code: this.code, invitecode: this.invitecode}
                         this.$api.smsLogin(data, res => {
                             if (res.status) {
-                                // 邀请码登录成功后删除  防止重复推荐
-                                this.GLOBAL.removeStorage('pid')
-                                this.GLOBAL.removeStorage('time')
                                 this.GLOBAL.setStorage('user_token', res.data)
                                 this.redirectHandler()
                             }
@@ -201,7 +198,10 @@ export default {
         },
         // 获取授权登录方式列表
         getAuth () {
-            this.$api.getTrustLogin({url: 'author'}, res => {
+            this.$api.getTrustLogin({
+                url: host + '/wap/index.html#/author',
+                uuid: this.genNonDuplicateID()
+            }, res => {
                 if (res.status) {
                     this.authList = res.data
                 }
@@ -209,6 +209,12 @@ export default {
         },
         toAuth (url) {
             window.location.href = url
+        },
+        // 生成一个用不重复的ID
+        genNonDuplicateID () {
+            let uid = Math.random().toString(36).substr(3)
+            this.GLOBAL.setStorage('uuid', uid)
+            return uid
         }
     }
 }
@@ -237,7 +243,7 @@ export default {
        margin: .5rem auto;
     }
     .wechat-login{
-        width: 1rem;
+        width: 80%;
         height: 1rem;
         margin: 0 auto .5rem;
     }

@@ -91,10 +91,10 @@
                 {field:'status', title:'状态'},
                 {field:'operating',width:195,title:'操作', align: 'center',templet:function(data){
                         var html = '';
-                        html += '<span class="layui-btn layui-btn-xs show-log" data-user_id="'+data.user_id+'" data-seller_id="'+data.seller_id+'">查看积分记录</span>';
-                        html += '<a class="layui-btn layui-btn-xs edit-point" data-user_id="'+data.user_id+'" data-seller_id="'+data.seller_id+'">编辑积分</a>';
+                        html += '<span class="layui-btn layui-btn-xs show-log" data-user_id="'+data.user_id+'">查看积分记录</span>';
+                        html += '<a class="layui-btn layui-btn-xs edit-point" data-user_id="'+data.user_id+'">编辑积分</a>';
                         return html;
-                    }, fixed: 'right'}
+                    }}
             ]]
         });
         layui.form.on('submit(*)', function(data){
@@ -109,9 +109,8 @@
 
         //查看积分记录
         $(document).on('click', '.show-log', function(){
-            var seller_id = $(this).attr('data-seller_id');
             var user_id = $(this).attr('data-user_id');
-            JsPost("{:url('User/pointLog')}", {seller_id: seller_id, user_id: user_id}, function(e){
+            JsPost("{:url('User/pointLog')}", {user_id: user_id}, function(e){
                 window.box = layer.open({
                     type: 1,
                     content: e,
@@ -123,9 +122,8 @@
 
         //编辑积分
         $(document).on('click', '.edit-point', function(){
-            var seller_id = $(this).attr('data-seller_id');
             var user_id = $(this).attr('data-user_id');
-            JsPost("{:url('User/editPoint')}", {seller_id: seller_id, user_id: user_id}, function(e){
+            JsPost("{:url('User/editPoint')}", {user_id: user_id}, function(e){
                 window.box = layer.open({
                     type: 1,
                     content: e,
@@ -137,18 +135,16 @@
 
         //编辑保存积分
         $(document).on('click', '.edit-point-save', function () {
-            let user_id = $("#user_id").val();
-            let seller_id = $("#seller_id").val();
-            let point = $("#point").val();
-            let memo = $("#memo").val();
-            let point_old = $("#point_old").val();
+            var user_id = $("#user_id").val();
+            var point = $("#point").val();
+            var memo = $("#memo").val();
+            var point_old = $("#point_old").val();
             if(point_old*1+point*1 < 0) {
                 layer.msg('扣除积分不能大于用余额积分');
                 return false;
             } else {
-                let data = {
+                var data = {
                     user_id: user_id,
-                    seller_id: seller_id,
                     point: point,
                     memo: memo,
                     flag: 'true'

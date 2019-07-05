@@ -50,48 +50,54 @@ class GoodsComment extends Common
     public function getList($goods_id, $page = 1, $limit = 10, $display = 'all')
     {
         $where[] = ['goods_id', 'eq', $goods_id];
-        if($display != 'all')
-        {
+        if ($display != 'all') {
             $where[] = ['display', 'eq', $display];
         }
         $res = $this::with('user')->where($where)
             ->order('ctime desc')
             ->page($page, $limit)
             ->select();
-        foreach($res as $k => &$v)
-        {
-            $imagesArr = explode(',', $v['images']);
-            foreach($imagesArr as $kk => &$vv)
-            {
-                $vv = _sImage($vv);
+        foreach ($res as $k => $v) {
+            if ($v['user']) {
+                $res[$k]['user']['avatar'] = _sImage($v['user']['avatar']);
+                $res[$k]['user']['mobile'] = format_mobile($v['user']['mobile']);
+            } else {
+                $res[$k]['user'] = [
+                    'avatar'   => _sImage(),
+                    'nickname' => '匿名用户',
+                    'id'       => 0,
+                ];
             }
-
-            $v['images_url'] = $imagesArr;
+            if ($v['images']) {
+                $imagesArr = explode(',', $v['images']);
+                if (count($imagesArr) > 0) {
+                    foreach ($imagesArr as $kk => &$vv) {
+                        $vv = _sImage($vv);
+                    }
+                    $res[$k]['images_url'] = $imagesArr;
+                }
+            }
         }
-
         $count = $this->where($where)
             ->count();
 
-        if($res !== false)
-        {
-            $res->hidden(['goods_id','images','user_id','user'=>['id','isdel','password','status','username','ctime','utime']]);
+        if ($res !== false) {
+            $res->hidden(['goods_id', 'images', 'user_id', 'user' => ['id', 'isdel', 'password', 'status', 'username', 'ctime', 'utime','balance','point','pid']]);
             $data = [
                 'status' => true,
-                'msg' => '获取成功',
-                'data' => [
-                    'list' => $res,
+                'msg'    => '获取成功',
+                'data'   => [
+                    'list'  => $res,
                     'count' => $count,
-                    'page' => $page,
+                    'page'  => $page,
                     'limit' => $limit
                 ]
             ];
-        }
-        else
-        {
+        } else {
             $data = [
                 'status' => false,
-                'msg' => '获取失败',
-                'data' => []
+                'msg'    => '获取失败',
+                'data'   => []
             ];
         }
         return $data;
@@ -269,12 +275,16 @@ class GoodsComment extends Common
         }
         return $return;
     }
+
     /**
      * 添加评价
      * @param $order_id
-     * @param $goods
+     * @param $items
      * @param $user_id
      * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
     public function addComment($order_id, $items, $user_id)
     {
@@ -322,7 +332,7 @@ class GoodsComment extends Common
                     'goods_id' => $item_info['goods_id'],
                     'order_id' => $order_id,
                     'images' => $images,
-                    'content' => $v['textarea'],
+                    'content' => htmlentities($v['textarea']),
                     'addon' => $item_info['addon']
                 ];
             }
@@ -345,5 +355,18 @@ class GoodsComment extends Common
             ];
         }
         return $return_data;
+    }
+
+
+    /**
+     * 获取商品评价数量
+     * @param $goods_id
+     * @return float|int|string
+     */
+    public function getCommentCount($goods_id)
+    {
+        $where[] = ['goods_id', 'eq', $goods_id];
+        $num = $this->where($where)->count();
+        return $num?$num:0;
     }
 }

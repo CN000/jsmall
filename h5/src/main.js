@@ -4,7 +4,7 @@ import Vue from 'vue'
 import App from './App'
 import routers from './router/routers'
 import VueRouter from 'vue-router'
-import Api from './common/api'
+import * as Api from './common/api'
 /* 相当于import YDUI from 'vue-ydui/ydui.rem.js' */
 import YDUI from 'vue-ydui'
 import 'vue-ydui/dist/ydui.rem.css'
@@ -14,6 +14,7 @@ import 'vue-social-share/dist/client.css'
 import Mui from 'vue-awesome-mui'
 import VueQriously from 'vue-qriously'
 import VueLazyload from 'vue-lazyload'
+import store from './store'
 
 Vue.use(VueQriously)
 Vue.use(Mui)
@@ -32,7 +33,7 @@ Vue.prototype.GLOBAL = Common
 const router = new VueRouter({
     mode: 'hash',
     routes: routers,
-    scrollBehavior(to, from, savedPosition) {
+    scrollBehavior (to, from, savedPosition) {
         if (savedPosition) {
             return savedPosition
         }
@@ -43,13 +44,20 @@ const router = new VueRouter({
 const that = new Vue({
     el: '#app',
     router,
+    store,
     components: { App },
     template: '<App/>'
 })
 
 router.beforeEach((route, redirect, next) => {
     document.title = route.meta.title ? route.meta.title : ''
-        // 如果将要跳转的页面需要登录 用户没有登录将跳转登录页面
+    //百度统计
+    if (typeof _hmt != "undefined" ) {
+        if (route.path) {
+            _hmt.push(['_trackPageview', '/#' + route.fullPath]);
+        }
+    }
+    // 如果将要跳转的页面需要登录 用户没有登录将跳转登录页面
     if (route.meta.isLogin) {
         if (!Common.getStorage('user_token')) {
             Common.jumpToLogin()

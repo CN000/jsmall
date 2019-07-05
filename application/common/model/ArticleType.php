@@ -24,11 +24,9 @@ class ArticleType extends Common
 
 
     /**
-     *  后台分类 树形列表
-     * @param int $seller_id
-     * @return array
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
+     * 后台分类 树形列表
+     * @param $post
+     * @return mixed
      * @throws \think\exception\DbException
      */
     public function tableData( $post )
@@ -36,7 +34,7 @@ class ArticleType extends Common
         if(isset($post['limit'])){
             $limit = $post['limit'];
         }else{
-            $limit = config('paginate.list_rows');
+            $limit = 50; // 后台列表分页数量默认50条
         }
         $tableWhere = $this->tableWhere($post);
         $list = $this->field($tableWhere['field'])->where($tableWhere['where'])->order($tableWhere['order'])->paginate($limit);
@@ -45,7 +43,7 @@ class ArticleType extends Common
         $re['code'] = 0;
         $re['msg'] = '';
         $re['count'] = $list->total();
-        $re['data'] = $this->getTree($data);
+        $re['data'] = $data;
         return $re;
     }
 
@@ -91,40 +89,37 @@ class ArticleType extends Common
     {
         $result = [
             'status' => true,
-            'msg' => '保存成功',
-            'data' => []
+            'msg'    => '保存成功',
+            'data'   => []
         ];
 
-        $validate = new Validate($this->rule,$this->msg);
-        if(!$validate->check($data))
-        {
+        $validate = new Validate($this->rule, $this->msg);
+        if (!$validate->check($data)) {
             $result['status'] = false;
-            $result['msg'] = $validate->getError();
+            $result['msg']    = $validate->getError();
         } else {
-            if (!$this->allowField(true)->save($data,['id'=>$data['id']]))
-            {
+            if ($this->allowField(true)->save($data, ['id' => $data['id']]) === false) {
                 $result['status'] = false;
-                $result['msg'] = '保存失败';
+                $result['msg']    = '保存失败';
             }
         }
         return $result;
     }
 
 
-
     /**
-     *  递归遍历表格输出
+     * 递归遍历表格输出
      * User:tianyu
-     * @param $arr  要输出的数组
-     * @param $pid   父id
-     * @param $step 节点替换次数
+     * @param $arr //要输出的数组
+     * @param int $pid //父id
+     * @param int $step //节点替换次数
      * @return array
      */
-    private function getTree($arr,$pid=0,$step=0){
+    public function getTree($arr, $pid = 0, $step = 0){
         global $tree;
         foreach($arr as $key=>$val) {
             if($val['pid'] == $pid) {
-                $flg = str_repeat('└―',$step);
+                $flg = str_repeat('└─',$step);
                 $val['type_name'] = $flg.$val['type_name'];
                 $tree[] = $val;
                 $this->getTree($arr , $val['id'] ,$step+1);
@@ -135,9 +130,7 @@ class ArticleType extends Common
 
 
     /**
-     *
-     *  获取文章分类列表
-     * @param $seller_id
+     * 获取文章分类列表
      * @return array
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
@@ -145,37 +138,88 @@ class ArticleType extends Common
      */
     public function articleTypeList()
     {
-        $list = $this->field('id,type_name')->select();
-        if(!$list->isEmpty())
-        {
-            $result = [
-                'status' =>  true,
-                'msg'    =>  '获取成功',
-                'data'   =>  [
-                    'list' => $list,
-                    'count' => count($list)
-                ],
-            ];
-        }else{
-            $result = [
-                'status' =>  false,
-                'msg'    =>  '获取失败',
-                'data'   =>  ''
-            ];
-        }
+        $result = [
+            'status' =>  true,
+            'msg'    =>  '获取成功',
+            'data'   =>  []
+        ];
+
+        $list = $this->field('id,pid,type_name')->select();
+        $tree = $this->getArticleTypeTree($list, 0);
+        $result['data']['list'] = $tree;
+
         return $result;
     }
 
 
+    /**
+     * 树状图递归
+     * @param $data
+     * @param int $pid
+     * @return array
+     */
+    public function getArticleTypeTree($data, $pid = 0)
+    {
+        $tree = [];
+        foreach($data as $k => $v)
+        {
+            if($v['pid'] == $pid)
+            {
+                $v['child'] = $this->getArticleTypeTree($data, $v['id']);
+                $tree[] = $v;
+            }
+        }
+        return $tree;
+    }
+
 
     /**
-     *  文章分类 与 文章 一对多关联
-     * User:tianyu
+     * 获取文章分类父级分类
+     * @param $type_id
+     * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function getArticleTypeFather($type_id)
+    {
+        return $this->getArticleTypeFatherTree($type_id);
+    }
+
+
+    /**
+     * 递归获取文章父类分类树状图
+     * @param $type_id
+     * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function getArticleTypeFatherTree($type_id)
+    {
+        $tree = [];
+        $where[] = ['id', 'eq', $type_id];
+        $info = $this->where($where)->find();
+        if($info['pid'] != 0)
+        {
+            $info['father'] = $this->getArticleTypeFatherTree($info['pid']);
+        }
+        else
+        {
+            $info['father'] = [];
+        }
+        $tree[] = $info;
+
+        return $tree;
+    }
+
+
+    /**
+     * 文章分类 与 文章 一对多关联
      * @return \think\model\relation\HasMany
      */
     public function comments()
     {
         return $this->hasMany('Article');
     }
-
 }

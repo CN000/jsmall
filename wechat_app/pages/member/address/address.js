@@ -58,7 +58,7 @@ Page({
         let province_name = e.detail.value[0];
         let city_name = e.detail.value[1];
         let county_name = e.detail.value[2];
-        let postal_code = 0;
+        let postal_code = e.detail.postcode;
         let page = this;
         let data = {
             province_name: province_name,
@@ -89,6 +89,30 @@ Page({
     //添加地址
     addAddress: function () {
         let page = this;
+        if (page.data.name == ''){
+            wx.showModal({
+                title: '提示',
+                content: '请输入收货人姓名',
+                showCancel: false
+            });
+            return false;
+        }
+        if(!app.common.isPhoneNumber(page.data.mobile)){
+            wx.showModal({
+                title: '提示',
+                content: '请输入正确的手机号',
+                showCancel: false
+            });
+            return false;
+        }
+        if (page.data.address == '') {
+            wx.showModal({
+                title: '提示',
+                content: '请输入收货详细地址',
+                showCancel: false
+            });
+            return false;
+        }
         let data = {
             'name': page.data.name,
             'mobile': page.data.mobile,
@@ -96,27 +120,20 @@ Page({
             'address': page.data.address,
             'is_def': page.data.is_def
         }
-        app.db.userToken(function (token) {
-            app.api.addSaveAddress(data, function(res){
-                if (res.status) {
-                    wx.showToast({
-                        title: '添加成功',
-                        icon: 'success',
-                        mask: true,
-                        complete: function () {
-                            setTimeout(function(){
-                                wx.navigateBack(1);
-                            }, 1500);
-                        }
-                    });
-                } else {
-                    wx.showModal({
-                        title: '提示',
-                        content: res.msg,
-                        showCancel: false
-                    });
-                }
-            });
+        app.api.addSaveAddress(data, function(res){
+            if (res.status) {
+                app.common.successToShow('添加成功', function () {
+                    setTimeout(function () {
+                        wx.navigateBack(1);
+                    }, 1500);
+                });
+            } else {
+                wx.showModal({
+                    title: '提示',
+                    content: res.msg,
+                    showCancel: false
+                });
+            }
         });
     }
 });

@@ -1,16 +1,56 @@
+<style type="text/css">
+    .spec_image{
+        display: inline-block;
+    }
+    .spec_image_item{
+        position: relative;
+        display: inline-block;
+    }
+    .del-img{
+        position: absolute;
+        background-color: rgba(0,0,0,.5);
+        color: #fff;
+        width: 13px;
+        height: 13px;
+        line-height: 12px;
+        font-size: 10px;
+        display: inline-block;
+        text-align: center;
+        border-radius: 50%;
+        right: -6px;
+        top: -6px;
+    }
+</style>
 <div id="spec_form">
 <div id="spec_select" {if condition="$items"}{else/}style="display:none;"{/if}>
     <div id="spec_form_item"  >
-        {volist name="spec" id="vo"}
-        <div class="layui-form-item" pane>
-            <label class="layui-form-label">{$vo.name}</label>
-            <div class="layui-input-block">
-                {volist name="vo.specValue" id="v"}
-                <input type="checkbox" name="spec[{$vo.name}][]" {if condition="$v['isSelected'] eq 'true'"} checked="true"  {/if} value="{$v.value}" lay-skin="primary" title="{$v.value}" lay-filter="spec_select">
-                {/volist}
+        {if condition="$customSpec"}
+            {volist name="spec" id="vo"}
+            <div class="layui-form-item" pane>
+                <label class="layui-form-label">{$vo.name}</label>
+                <div class="layui-input-block">
+                    {volist name="vo.specValue" id="v"}
+                    <div class="spec-item layui-input-inline">
+                        <input type="checkbox" name="spec[{$vo.name}][{$v.id}]" value="{$v.value}" lay-skin="primary"  lay-filter="spec_select" class="spec-select" {if condition="$v['isSelected'] eq 'true'"} checked="true"{/if} >
+                        <input type="text" value="{$v.value}" name="goods[new_spec][{$v.id}][]" class="layui-input new-spec">
+                    </div>
+                    {/volist}
+                </div>
             </div>
-        </div>
-        {/volist}
+            {/volist}
+        {else}
+            {volist name="spec" id="vo"}
+            <div class="layui-form-item" pane>
+                <label class="layui-form-label">{$vo.name}</label>
+                <div class="layui-input-block">
+                    {volist name="vo.specValue" id="v"}
+                    <input type="checkbox" name="spec[{$vo.name}][]" {if condition="$v['isSelected'] eq 'true'"} checked="true"  {/if} value="{$v.value}" lay-skin="primary" title="{$v.value}" lay-filter="spec_select">
+                    {/volist}
+                </div>
+            </div>
+            {/volist}
+        {/if}
+
     </div>
     <div class="layui-form-item">
         <div class="layui-input-inline">
@@ -29,21 +69,34 @@
             <thead>
             <tr>
                 <th>默认货品</th>
+                <th>图片</th>
                 <th>货号</th>
                 <th>规格</th>
                 <th>库存</th>
-                <th>销售价</th>
+                <th><i class="required-color">*</i>销售价</th>
                 <th>成本价</th>
                 <th>市场价</th>
                 <th>操作</th>
             </tr>
             </thead>
             <tbody>
-            {volist name="items" id="vo"}
+            {volist name="items" id="vo" key="key"}
             <tr>
                 <td>
                     <input type="hidden" name="product[{$vo.spec_name}][id]" value="{$vo.product_id}">
                     <input type="checkbox" name="product[{$vo.spec_name}][is_defalut]" title="是否默认" value="1" {if condition="$vo['is_defalut'] eq 1"} checked="true"  {/if} class="isdefalut" lay-filter="isdefalut">
+                </td>
+                <td>
+                    <a class="upSpecImage" href="javascript:void(0);">选择图片</a>
+                    <div class="spec_image" {if condition="!$vo.image_id" } style="display: none;" {/if}>
+                        <div class="spec_image_item">
+                            <div class="del-img">
+                                x
+                            </div>
+                            <img src="{$vo.image_id|_sImage}" id="image-{$key}" style="width:60px;height:60px">
+                        </div>
+                        <input type="hidden" name="product[{$vo.spec_name}][image_id]"  value="{$vo.image_id}"  >
+                    </div>
                 </td>
                 <td>
                     <input type="text" name="product[{$vo.spec_name}][sn]" value="{$vo.sn}"  placeholder="货号" autocomplete="off" class="layui-input">
@@ -51,8 +104,10 @@
                 <td>
                     {$vo.spec_name}
                 </td>
-                <td>
-                    <input type="text" name="product[{$vo.spec_name}][stock]" value="{$vo.stock}"  placeholder="库存" autocomplete="off" class="layui-input">
+                <td class="have-add-td">
+                    <input type="text" name="product[{$vo.spec_name}][stock]" value="0"  placeholder="库存" autocomplete="off" class="layui-input goods-stock">
+                    <input type="checkbox" name="product[{$vo.spec_name}][stock_type]" lay-skin="switch" lay-text="增加|减少" checked>
+                    <a href="javascript:;" class="help-tip" data-tip="总库存：{$vo.total_stock|default=0}，冻结库存：{$vo.freeze_stock|default=0}"><i class="iconfont icon-wenhao"></i></a>
                 </td>
                 <td>
                     <input type="text" name="product[{$vo.spec_name}][price]" value="{$vo.price}"  placeholder="销售价" autocomplete="off" class="layui-input">
@@ -79,33 +134,35 @@
         <label class="layui-form-label">销售价：</label>
         <div class="layui-input-inline">
             <input type="hidden" name="product[id]" value="{$product.id}">
-            <input type="text" name="goods[price]" value="{$goods.price}" placeholder="￥" autocomplete="off" class="layui-input">
+            <input type="text" name="goods[price]" value="{$product.price}" placeholder="￥" autocomplete="off" class="layui-input">
         </div>
     </div>
     <div class="layui-form-item">
         <label class="layui-form-label">成本价：</label>
         <div class="layui-input-inline">
-            <input type="text" name="goods[costprice]" value="{$goods.costprice}" placeholder="￥" autocomplete="off" class="layui-input">
+            <input type="text" name="goods[costprice]" value="{$product.costprice}" placeholder="￥" autocomplete="off" class="layui-input">
         </div>
     </div>
     <div class="layui-form-item">
         <label class="layui-form-label">市场价：</label>
         <div class="layui-input-inline">
-            <input type="text" name="goods[mktprice]" value="{$goods.mktprice}" placeholder="￥" autocomplete="off" class="layui-input">
+            <input type="text" name="goods[mktprice]" value="{$product.mktprice}" placeholder="￥" autocomplete="off" class="layui-input">
         </div>
     </div>
 
     <div class="layui-form-item">
         <label class="layui-form-label">货号：</label>
         <div class="layui-input-inline">
-            <input type="text" name="goods[sn]" value="{$goods.bn}" lay-verify="title" autocomplete="off" placeholder="请输入货号" class="layui-input">
+            <input type="text" name="goods[sn]" value="{$product.sn}" lay-verify="title" autocomplete="off" placeholder="请输入货号" class="layui-input">
         </div>
     </div>
 
-    <div class="layui-form-item">
+    <div class="layui-form-item have-add">
         <label class="layui-form-label">库存：</label>
         <div class="layui-input-inline">
-            <input type="text" name="goods[stock]" value="{$goods.stock}"  lay-verify="title" autocomplete="off" placeholder="请输入商品库存" class="layui-input">
+            <input type="text" name="goods[stock]" value="0"   autocomplete="off" placeholder="" class="layui-input goods-stock">
+            <input type="checkbox" name="goods[stock_type]" lay-skin="switch" lay-text="增加|减少" checked>
+            <a href="javascript:;" class="help-tip" data-tip="总库存：{$product.total_stock}，冻结库存：{$product.freeze_stock}"><i class="iconfont icon-wenhao"></i></a>
         </div>
     </div>
 </div>
@@ -137,8 +194,8 @@
             <input type="text" name="goods[params][{$vo.params.name}]" value="{$goodsParams[$vo.params.name]}" class="layui-input">
         {elseif condition="$vo.params.type eq 'checkbox'"/}
             {volist name="$vo.params.value" id="params"}
-                {if condition="$goodsParams[$vo['params']['name']]"}
-                <input type="checkbox" name="goods[params][{$vo.params.name}][{$params}]" lay-skin="primary" title="{$params}" {if condition="in_array($params, $goodsParams[$vo['params']['name']])"}checked{/if}>
+                {if condition="isset($goodsParams[$vo['params']['name']]) && $goodsParams[$vo['params']['name']]"}
+                <input type="checkbox" name="goods[params][{$vo.params.name}][{$params}]" lay-skin="primary" title="{$params}" {if condition=" is_array($goodsParams[$vo['params']['name']]) && in_array($params, $goodsParams[$vo['params']['name']])"}checked{/if}>
                 {else}
                 <input type="checkbox" name="goods[params][{$vo.params.name}][{$params}]" lay-skin="primary" title="{$params}">
                 {/if}
@@ -176,10 +233,17 @@
                 });
                 $(data.othis).addClass("layui-form-checked");
             }else{
-                $(dom).attr("checked",false);
-                $(dom).attr("value","0");
-                $("#more_spec .layui-form-checkbox").removeClass('layui-form-checked');
+                $("#more_spec .layui-form-checkbox").first().addClass('layui-form-checked');
+                $(".isdefalut").first().attr("checked",true);
+                $(".isdefalut").first().attr("value","1");
             }
         });
+
+        $("body").on("input propertychange",'.new-spec',function(){
+            var value = $(this).val();
+            var specCheckbox = $(this).parent('.spec-item').find(".spec-select");
+            specCheckbox.val(value);
+        });
+
     });
 </script>

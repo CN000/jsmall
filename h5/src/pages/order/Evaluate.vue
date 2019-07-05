@@ -13,22 +13,24 @@
                 <yd-cell-item>
                     <yd-textarea slot="right" v-model="textarea[item.id]" placeholder="宝贝满足你的期望吗？说说它的优点和美中不足的地方吧" maxlength="200"></yd-textarea>
                 </yd-cell-item>
-                <div class="uploadimg-list"  v-if="images[item.id].length">
-                    <div v-for="(img, index) in images[item.id]" :key="index">
+
+                <div class="evaluatebody-img">
+
+                    <div class="uploadimg-list"  v-if="images[item.id].length" v-for="(img, index) in images[item.id]" :key="index">
+                        <!--<div>-->
                         <yd-badge @click.native="remove(item.id, index)">X</yd-badge>
                         <img class="thumbnail-list" :src="img.url">
+                        <!--</div>-->
                     </div>
-                </div>
-                <div class="evaluatebody-img">
                     <div class="uploadimg">
-                        <input name="file" type="file" accept="image/png,image/gif,image/jpeg" @change="update(item.id,$event)"/>
+                        <input name="file" type="file" accept="image/png,image/gif,image/jpeg" @change="update(item.id,$event)" ref="file"/>
                         <img slot="icon" src="../../../static/image/addimg.png" v-show="isupload[item.id]">
                     </div>
                 </div>
             </div>
         </div>
         <yd-button-group>
-            <yd-button size="large" bgcolor="#ff3b44" color="#fff" @click.native="sendEvaluate">提交评价</yd-button>
+            <yd-button size="large" bgcolor="#ff3b44" color="#fff" @click.native="sendEvaluate" style="max-width:750px">提交评价</yd-button>
         </yd-button-group>
     </div>
 </template>
@@ -45,6 +47,11 @@ export default {
             isupload: [] // 启/禁用 图片上传按钮
         }
     },
+    computed: {
+        uploadImageMax () {
+            return this.$store.state.config.upload_image_max
+        }
+    },
     created () {
         if (!this.order_id) {
             this.$dialog.alert({
@@ -58,7 +65,7 @@ export default {
         this.$api.orderDetail({
             order_id: this.order_id
         }, res => {
-            if (res.data.text_status !== 'pending_evaluate') {
+            if (res.data.text_status !== 4) {
                 this.$dialog.alert({
                     mes: '该订单状态有误暂不可评价',
                     callback: () => {
@@ -89,9 +96,9 @@ export default {
         // 上传对应商品的图片
         update (key, e) {
             let file = e.target.files[0]
-            let param = new FormData()
-            param.append('upfile', file, file.name)
-            this.$api.uploadFile('image', param, res => {
+            let data = new FormData()
+            data.append('upfile', file, file.name)
+            this.$api.uploadFile(data, res => {
                 if (res.status) {
                     let img = {
                         url: res.data.url,
@@ -100,6 +107,8 @@ export default {
                     this.images[key].push(img)
                 }
             })
+            // 上传完成后清空input的值
+            this.$refs.file[0].value = ''
         },
         // 删除对应的商品评论图片
         remove (key, index) {
@@ -118,6 +127,7 @@ export default {
                     textarea: this.textarea[k]
                 }
             }
+
             this.$api.orderEvaluate(data, res => {
                 if (res.status) {
                     this.$dialog.toast({mes: res.msg, timeout: 1000, icon: 'success'})
@@ -132,7 +142,7 @@ export default {
         // 监听图片数量  是否超出限制
         images () {
             for (let k in this.images) {
-                if (this.images[k].length >= 4) {
+                if (this.images[k].length >= this.uploadImageMax) {
                     this.isupload[k] = false
                 } else {
                     this.isupload[k] = true

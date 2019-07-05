@@ -388,6 +388,11 @@
                 imageMaxSize = editor.getOpt('imageMaxSize'),
                 imageCompressBorder = editor.getOpt('imageCompressBorder');
 
+            if(editor.options.single == true){
+                $("span[data-content-id='upload']").hide();
+                $("span[data-content-id='online']").hide();
+                $("span[data-content-id='search']").hide();
+            }
             if (!WebUploader.Uploader.support()) {
                 $('#filePickerReady').after($('<div>').html(lang.errorNotSupport)).hide();
                 return;
@@ -404,7 +409,7 @@
                 accept: {
                     title: 'Images',
                     extensions: acceptExtensions,
-                    mimeTypes: 'image/*'
+                    mimeTypes: 'image/jpg,image/jpeg,image/png'
                 },
                 swf: '../../third-party/webuploader/Uploader.swf',
                 server: actionUrl,
@@ -955,6 +960,7 @@
                                 _this.scale(image, image.parentNode.offsetWidth, image.parentNode.offsetHeight);
                             }
                         })(img));
+						
                         img.width = 113;
                         img.setAttribute('src', urlPrefix + list[i].url + (list[i].url.indexOf('?') == -1 ? '?noCache=' : '&noCache=') + (+new Date()).toString(36));
                         img.setAttribute('_src', urlPrefix + list[i].url);

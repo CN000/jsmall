@@ -2,8 +2,9 @@
 /**
  * 微信快捷登录
  */
-namespace addons\trustlogin\lib;
+namespace addons\Trustlogin\lib;
 
+use think\facade\Cache;
 use think\facade\Log;
 
 class weixin{
@@ -21,10 +22,10 @@ class weixin{
      * @param $redirect_uri
      * @return string
      */
-    public function getOauthUrl($redirect_uri){
+    public function getOauthUrl($redirect_uri,$uuid = ''){
         $state = rand(10000,99999);
-        session('state',$state);
-        return  $this->oauth->getOauthRedirect($redirect_uri,$state);
+        Cache::set("user_".$uuid,$state);//用户id和session对应
+        return  $this->oauth->getOauthRedirect($redirect_uri,$state,'snsapi_userinfo');
     }
 
     /**
@@ -32,8 +33,8 @@ class weixin{
      * @param string $state
      * @return bool
      */
-    private function checkState($state = ''){
-        if($state != session('state')){
+    private function checkState($state = '',$uuid = ''){
+        if($state != Cache::get('user_'.$uuid)){
             return false;
         }
         return true;
@@ -44,21 +45,31 @@ class weixin{
      */
     public function getUserInfo($params)
     {
-        //TODO 临时注释掉,没有获取到
-        /*if (!$this->checkState($params['state'])) {
-            return false;
-        }*/
+        $data = [
+            'status' => false,
+            'msg'    => '获取失败',
+            'data'   => []
+        ];
+        if (!$this->checkState($params['state'], $params['uuid'])) {
+            $data['msg'] = 'state错误';
+            return $data;
+        }
         $accessToken = $this->oauth->getOauthAccessToken($params);
         if (!$accessToken) {
-            return false;
+            $data['msg'] = '获取授权失败';
+            return $data;
         }
         $userInfo = $this->oauth->getOauthUserInfo($accessToken['access_token'], $accessToken['openid']);
         Log::info("用户信息：" . json_encode($userInfo));
         $user = [];
-        if(!$userInfo) {
-            return false;
+        if (!$userInfo) {
+            $data['msg'] = '获取用户信息失败';
+            return $data;
         }
-        return $this->getUserData($userInfo);
+        $data['status'] = true;
+        $data['msg']    = '获取成功';
+        $data['data']   = $this->getUserData($userInfo);
+        return $data;
     }
 
     /**
@@ -68,17 +79,17 @@ class weixin{
      */
     public function getUserData($params = [])
     {
-        $userData['openid'] = $params['openid'];
-        $userData['unionId'] = $params['unionid'];
+        $userData['openid']    = $params['openid'];
+        $userData['unionId']   = $params['unionid'];
         $userData['privilege'] = $params['privilege'];
-        $userData['avatar'] = $params['headimgurl'];
-        $userData['country'] = $params['country'];
-        $userData['language'] = $params['language'];
-        $userData['province'] = $params['province'];
-        $userData['city'] = $params['city'];
-        $userData['gender'] = $params['sex'];
-        $userData['nickName'] = $params['nickname'];
-        $userData['username'] = $params['nickname'];
+        $userData['avatar']    = $params['headimgurl'];
+        $userData['country']   = $params['country'];
+        $userData['language']  = $params['language'];
+        $userData['province']  = $params['province'];
+        $userData['city']      = $params['city'];
+        $userData['gender']    = $params['sex'];
+        $userData['nickName']  = $params['nickname'];
+        $userData['username']  = $params['nickname'];
         return $userData;
     }
 

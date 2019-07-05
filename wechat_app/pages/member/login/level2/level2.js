@@ -29,21 +29,16 @@ Page({
     mobile:'',
     code:'',
     last_time: '',
-    is_show: true
+    is_show: true,
+    wx_user_id:0
   },
   clickVerify: function () {
-    //console.log(this.data.mobile);
     var that = this;
     if (this.data.mobile == '') {
-      wx.showToast({
-        title: '请输入手机号码',
-        icon: 'success',
-        duration: 2000
-      })
+      app.common.errorToBack('请输入手机号码', 0);
       return false;
     }
     app.api.sms(this.data.mobile,'login', function (res) {
-      //console.log(res);
       if (res.status) {
         // 将获取验证码按钮隐藏60s，60s后再次显示
         that.setData({
@@ -51,18 +46,10 @@ Page({
         })
         settime(that);
 
-        wx.showToast({
-          title: '发送成功',
-          icon: 'success',
-          duration: 2000
-        })
+        app.common.successToShow('发送成功');
       } else {
         //报错了
-        wx.showToast({
-          title: res.msg,
-          icon: 'success',
-          duration: 2000
-        })
+        app.common.errorToBack(res.msg, 0);
       }
     });
     
@@ -71,7 +58,9 @@ Page({
    * 生命周期函数--监听页面加载
    */
   onLoad: function (options) {
-  
+    this.setData({
+      user_wx_id: options.user_wx_id
+    });
   },
 
   /**
@@ -101,13 +90,6 @@ Page({
   onUnload: function () {
   
   },
-  //跳转到微信登陆页面
-  showWxLogin: function(e) {
-    wx.redirectTo({
-      url: '../level1/level1'
-    })
-  },
-
 
   mobileChange: function(e) {
     this.setData({
@@ -122,46 +104,36 @@ Page({
   //提交按钮
   showTopTips: function () {
     if (this.data.mobile == '') {
-      wx.showToast({
-        title: '请输入手机号码',
-        icon: 'success',
-        duration: 2000
-      })
+      app.common.errorToBack('请输入手机号码', 0);
       return false;
     }
     if (this.data.code == '') {
-      wx.showToast({
-        title: '请输入验证码',
-        icon: 'success',
-        duration: 2000
-      })
+      app.common.errorToBack('请输入验证码', 0);
       return false;
     }
+  
     var data = {
       mobile: this.data.mobile,
-      code: this.data.code
-      };
+      code: this.data.code,
+      platform:2,     //平台id，标识是小程序登陆的
+      user_wx_id: this.data.user_wx_id         //微信小程序接口存不了session，所以要绑定的id只能传到前台
+    };
+    //有推荐码的话，带上
+    var invitecode = app.db.get('invitecode');
+    if (invitecode){
+      data.invitecode = invitecode;
+    }
     app.api.smsLogin(data, function (res) {
       if (res.status) {
         app.db.set('userToken', res.data);
-        wx.showToast({
-          title: '登陆成功',
-          icon: 'success',
-          duration: 2000,
-          success: function(res) {
-            wx.navigateBack({
-              delta: 1
-            })
-          }
-        });
-        
+          app.common.successToShow('登陆成功', function () {
+              wx.navigateBack({
+                  delta: 1
+              });
+          });
       } else {
         //报错了
-        wx.showToast({
-          title: res.msg,
-          icon: 'success',
-          duration: 2000
-        })
+        app.common.errorToBack(res.msg, 0);
       }
     });
 

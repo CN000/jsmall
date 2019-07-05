@@ -132,17 +132,16 @@ class UserBankcards extends Common
             $return['msg'] = '该卡片已经添加';
             return $return;
         }
-
         $new_data = [
             'user_id' => $user_id,
             'bank_name' => $data['bank_name'],
             'bank_area_id' => $data['bank_area_id'],
-            'account_bank' => $data['account_bank'],
-            'account_name' => $data['account_name'],
+            'account_bank' => htmlentities($data['account_bank']),
+            'account_name' => htmlentities($data['account_name']),
             'bank_code' => $data['bank_code'],
             'card_number' => $data['card_number'],
             'card_type' => $data['card_type'],
-            'is_default' => isset($data['is_default']) && $data['is_default'] ? self::DEFAULT_YES : self::DEFAULT_NO
+            'is_default' =>( isset($data['is_default']) && $data['is_default']==self::DEFAULT_YES )? self::DEFAULT_YES : self::DEFAULT_NO
         ];
 
         if ($new_data['is_default'] == self::DEFAULT_YES)
@@ -426,8 +425,7 @@ class UserBankcards extends Common
         $res = $curl->get($url);
         $res = json_decode($res, true);
         if (!$res['validated']) {
-            $result['status'] = false;
-            $result['msg'] = '卡号错误或卡片状态异常';
+            return error_code(11021);
         } else {
             $card = [];
             $card['name'] = config('bank.bank_list')[$res['bank']];

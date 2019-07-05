@@ -27,7 +27,6 @@ Page({
     var page = this;
     app.api.userInfo(function (res) {
       if (res.status) {
-        //console.log(res);
         var the_sex = 0;
         if(res.data.sex == 3){
           the_sex = 0;
@@ -50,15 +49,15 @@ Page({
   },
   //提交按钮
   showTopTips: function () {
-    //console.log(this.data.nickname);
     if(this.data.nickname == ''){
-      wx.showToast({
-        title: '请输入昵称',
-        icon: 'success',
-        duration: 2000
-      })
+      app.common.errorToBack('请输入昵称', 0);
       return false;
     }
+      if (this.data.birthday == '请选择'){
+          app.common.errorToBack('请选择出生日期', 0);
+          return false;
+      }
+
     var the_sex = this.data.sex;
     if (the_sex== 0) {
       the_sex = 3;
@@ -70,7 +69,11 @@ Page({
     };
     app.api.userEditInfo(data,function (res) {
       if (res.status) {
-        app.common.successToShow();
+        app.common.successToShow('保存成功', function(){
+            wx.navigateBack({
+                delta: 1
+            });
+        });
       } else {
         app.common.errorToBack(res.msg,0);
       }

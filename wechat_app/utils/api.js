@@ -1,13 +1,14 @@
 var config = require('config.js');
 var common = require('common.js');
+var db = require('db.js');
 //需要token才能访问的数组
-var methodToken = ['user.info', 'user.editinfo', 'cart.getlist', 'user.goodscollection', 'cart.add', 'cart.del', 'cart.setnums', 'user.saveusership', 'order.create', 'user.goodsbrowsing', 'user.pay', 'payments.getinfo', 'order.getorderlist', 'order.cancel', 'order.getorderstatusnum', 'user.delgoodsbrowsing', 'user.goodscollectionlist', 'coupon.getcoupon', 'coupon.usercoupon', 'order.details', 'order.confirm', 'user.orderevaluate', 'order.aftersalesstatus', 'order.addaftersales', 'order.aftersalesinfo', 'order.aftersaleslist', 'order.sendreship', 'order.iscomment', 'user.getuserdefaultship', 'user.changeavatar', 'user.issign', 'user.sign', 'user.pointlog', 'user.getdefaultbankcard', 'user.getbankcardlist', 'user.getbankcardinfo', 'user.cash', 'user.setdefaultbankcard', 'user.removebankcard', 'user.addbankcard', 'user.cashlist', 'user.balancelist', 'user.recommend', 'user.sharecode', 'user.getusership', 'user.vuesaveusership', 'user.removeship', 'user.setdefship', 'user.getshipdetail', 'user.editship', 'user.getuserpoint', 'store.isclerk', 'store.storeladinglist', 'store.getdefaultstore', 'store.ladingdel', 'store.ladinginfo', 'store.lading'];
+var methodToken = ['user.info', 'user.editinfo', 'cart.getlist', 'user.goodscollection', 'cart.add', 'cart.del', 'cart.setnums', 'user.saveusership', 'order.create', 'user.goodsbrowsing', 'user.pay', 'payments.getinfo', 'order.getorderlist', 'order.cancel', 'order.getorderstatusnum', 'user.delgoodsbrowsing', 'user.goodscollectionlist', 'coupon.getcoupon', 'coupon.usercoupon', 'order.details', 'order.confirm', 'user.orderevaluate', 'order.aftersalesstatus', 'order.addaftersales', 'order.aftersalesinfo', 'order.aftersaleslist', 'order.sendreship', 'order.iscomment', 'user.getuserdefaultship', 'user.changeavatar', 'user.issign', 'user.sign', 'user.pointlog', 'user.getdefaultbankcard', 'user.getbankcardlist', 'user.getbankcardinfo', 'user.cash', 'user.setdefaultbankcard', 'user.removebankcard', 'user.addbankcard', 'user.cashlist', 'user.balancelist', 'user.recommend', 'user.sharecode', 'user.getusership', 'user.vuesaveusership', 'user.removeship', 'user.setdefship', 'user.getshipdetail', 'user.editship', 'user.getuserpoint', 'store.isclerk', 'store.storeladinglist', 'store.getdefaultstore', 'store.ladingdel', 'store.ladinginfo', 'store.lading', 'coupon.getcouponkey', 'user.myinvite', 'user.activationinvite', 'cart.getnumber', 'user.userpointlog', 'user.getsigninfo'];
 
 //接口统一封装
 function api(method,data,callback,show = true){
   //如果是需要登陆的，增加token
   if (methodToken.indexOf(method)>= 0){
-    var userToken = wx.getStorageSync('userToken');
+    var userToken = db.get('userToken');
     if (!userToken){
       common.jumpToLogin();
     }else{
@@ -37,7 +38,6 @@ function post(data,callback,show){
       if(show){
         wx.hideLoading();
       }
-      //console.log(res);
       //这里做判断，如果不报错就返回，如果报错，就做错误处理
       if (res.data.status) {
         callback(res.data);
@@ -116,19 +116,14 @@ function error(res,callback,postData){
   }
 }
 // function jumpToLogin(){
-//   var value = wx.getStorageSync('jump_to_login');
+//   var value = db.get('jump_to_login');
 //   if (!value) {
-//     wx.setStorageSync('jump_to_login', true);   //因为可能多个接口同时调用，所以这里要设置个状态位，保证登陆页面只显示一次，此值在登陆页面出去的时候，必须清空
-//     wx.showToast({
-//       title: '请登录...',
-//       icon: 'success',
-//       duration: 2000,
-//       success: function (res) {
-//         wx.navigateTo({
-//           url: '/pages/member/login/login'
-//         });
-//       }
-//     })
+//     db.set('jump_to_login', true);   //因为可能多个接口同时调用，所以这里要设置个状态位，保证登陆页面只显示一次，此值在登陆页面出去的时候，必须清空
+//      common.successToShow('请登录...', function () {
+//          wx.navigateTo({
+//              url: '/pages/member/login/login'
+//          });
+//      });
 //   } 
 // }
 
@@ -150,7 +145,7 @@ function login1(data,callback) {
 }
 function login2(data, callback) {
     //加入邀请码
-    let pid = wx.getStorageSync('beInvited');
+    let pid = db.get('invitecode');
     if (pid) {
         data['pid'] = pid;
     }
@@ -213,20 +208,12 @@ function sms(mobile,code, callback) {
   //       })
   //     } else {
   //       //wx.login成功，但是没有取到code
-  //       wx.showToast({
-  //         title: '用户授权失败wx.login',
-  //         icon: 'warn',
-  //         duration: 2000
-  //       })
+  //       common.errorToBack('用户授权失败wx.login', 0);
   //     }
   //   },
   //   fail: function (res) {
   //     //wx.login的fail
-  //     wx.showToast({
-  //       title: '用户授权失败wx.login',
-  //       icon: 'warn',
-  //       duration: 2000
-  //     })
+  //     common.errorToBack('用户授权失败wx.login', 0);
   //   }
   // });
 //}
@@ -282,11 +269,13 @@ function goodsList(data,callback) {
   }
   //把排序换成字符串
   if(data.order){
-    var sort = 'desc';
-    if(data.order.sort){
-      sort = data.order.sort;
+    var sort = data.order.key + ' ' + data.order.sort;
+    if(data.order.key != 'sort'){
+      sort = sort + ',sort asc'   //如果不是综合排序，增加上第二个排序优先级排序
     }
-    newData.order = data.order.key+ ' ' + sort;
+    newData.order = sort;
+  }else{
+    newData.order = 'sort asc';
   }
   api('goods.getlist', newData, function (res) {
     callback(res);
@@ -319,7 +308,7 @@ function goodsParameter(data, callback) {
 //商品浏览记录添加接口，此接口有点特殊，登陆状态在这里判断，而不是在基类里判断
 function goodsHistory(data, callback) {
   //如果本地有token，那么就去增加浏览记录，否则，就不增加，极个别情况，登陆状态失效了，可能会跳转到登陆页面，此种情况不考虑
-  var userToken = wx.getStorageSync('userToken');
+  var userToken = db.get('userToken');
   if (userToken) {
     data.token = userToken;
     api('user.addgoodsbrowsing', data, function (res) {
@@ -366,6 +355,7 @@ function saveUserShip(data, callback) {
 }
 //创建订单
 function createOrder(data, callback) {
+  data.source = 3;
   api('order.create', data, function (res) {
     callback(res);
   });
@@ -581,30 +571,9 @@ function sign(callback) {
       callback(res);
   });
 }
-//我的积分记录
-function pointLog(callback) {
-  api('user.pointlog', {}, function (res) {
-      callback(res);
-  });
-}
-//获取共享店铺列表
-function getStoreByToken(data, callback) {
-  post2('Common/getStoreInfo', {}, function(res) {
-    callback(res);
-  });
-}
 //获取店铺名称
 function getStoreName(callback) {
   api('user.getstorename', {}, function (res) {
-    callback(res);
-  });
-}
-//获取店铺配置信息
-function getSellerSetting(the_key,callback) {
-  var data = {
-    key: the_key,
-  };
-  api('user.getsellersetting', data, function (res) {
     callback(res);
   });
 }
@@ -688,15 +657,13 @@ function recommendList(data, callback) {
 }
 //获取用户邀请码
 function sharecode(callback) {
-  var userToken = wx.getStorageSync('userToken');
+  var userToken = db.get('userToken');
   if (userToken) {
-    var data = {};
-    data.token = userToken;
+    var data = {
+        token: userToken
+    };
     api('user.sharecode', data, function (res) {
-      //如果不是身份过期的话，就执行
-      if((res.status == false && data == 14007)){
         callback(res);
-      }
     }); 
   }
 }
@@ -808,6 +775,96 @@ function lading(data, callback) {
         callback(res);
     });
 }
+//是否开启积分
+function isPoint(callback){
+    api('user.ispoint', {}, function(res){
+        callback(res);
+    });
+}
+//输入优惠券码领取
+function getCouponKey(data, callback){
+    api('coupon.getcouponkey', data, function(res){
+        callback(res);
+    });
+}
+//获取我的邀请信息
+function myInvite(callback){
+    api('user.myinvite', {}, function(res){
+        callback(res);
+    });
+}
+//设置我的上级邀请人
+function setMyInvite(data, callback){
+    api('user.activationinvite', data, function (res){
+        callback(res);
+    });
+}
+//获取带参数的小程序二维码
+function getQRCode(data, callback){
+    api('store.getinviteqrcode', data, function(res){
+        callback(res);
+    });
+}
+//获取物流详情
+function getLogisticsData(data, callback){
+    api('order.logisticbyapi', data, function(res){
+        callback(res);
+    });
+}
+//购物车数量
+function getCartNumber(callback) {
+    api('cart.getnumber', {}, function (res) {
+        callback(res);
+    });
+}
+//获取分类名称
+function getGoodsClass(data, callback){
+    api('categories.getname', data, function(res){
+        callback(res);
+    });
+}
+//获取全部分类
+function getAllCat(callback){
+    api('categories.getallcat', {}, function(res){
+        callback(res);
+    });
+}
+//获取推荐搜索词
+function getRecommendKeys(callback){
+    api('store.getrecommendkeys', {}, function (res) {
+        callback(res);
+    });
+}
+//获取表单详情
+function getFormDetial(data, callback) {
+  api('form.getformdetial', data, function (res) {
+    callback(res);
+  });
+}
+//提交表单
+function addSubmitForm(data, callback) {
+  api('form.addsubmit', data, function (res) {
+    callback(res);
+  });
+}
+//获取用户积分明细
+function userPointLog(data, callback) {
+    api('user.userpointlog', data, function (res) {
+        callback(res);
+    });
+}
+//获取税号
+function getTaxCode(data, callback) {
+    api('order.gettaxcode', data, function (res) {
+        callback(res);
+    });
+}
+//获取签到信息
+function getSignInfo (callback) {
+    api('user.getsigninfo', {}, function (res) {
+        callback(res);
+    });
+}
 
 module.exports = {
   login1: login1,
@@ -822,7 +879,6 @@ module.exports = {
   goodsList: goodsList,
   cartList: cartList,
   goodsInfo: goodsInfo,
-  productInfo: productInfo,
   productInfo: productInfo,
   goodsParameter: goodsParameter,
   goodsHistory: goodsHistory,
@@ -863,10 +919,7 @@ module.exports = {
   changeAvatar: changeAvatar,
   isSign: isSign,
   sign: sign,
-  pointLog: pointLog,
-  getStoreByToken: getStoreByToken,
   getStoreName: getStoreName,
-  getSellerSetting: getSellerSetting,
   getCashList: getCashList,
   getUserDefaultBankCard: getUserDefaultBankCard,
   getBankCardList: getBankCardList,
@@ -896,5 +949,20 @@ module.exports = {
   getStoreList: getStoreList,
   ladingDel: ladingDel,
   ladingInfo: ladingInfo,
-  lading: lading
+  lading: lading,
+  isPoint: isPoint,
+  getCouponKey: getCouponKey,
+  myInvite: myInvite,
+  setMyInvite: setMyInvite,
+  getQRCode: getQRCode,
+  getLogisticsData: getLogisticsData,
+  getGoodsClass: getGoodsClass,
+  getCartNumber: getCartNumber,
+  getFormDetial: getFormDetial,
+  addSubmitForm: addSubmitForm,
+  getAllCat: getAllCat,
+  getRecommendKeys: getRecommendKeys,
+  userPointLog: userPointLog,
+  getTaxCode: getTaxCode,
+  getSignInfo: getSignInfo
 }

@@ -12,14 +12,17 @@ namespace app\api\controller;
 use app\common\controller\Api;
 use app\common\model\ArticleType;
 use app\common\model\Article;
+use think\facade\Request;
 
 class Articles extends Api
 {
 
     /**
-     *  获取对应商户全部文章分类列表
-     * User:tianyu
+     * 获取全部文章分类列表
      * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
     public function getArticleType()
     {
@@ -29,35 +32,34 @@ class Articles extends Api
 
 
     /**
-     *  获取指定分类下的文章列表
-     * User:tianyu
+     * 获取文章列表
      * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
     public function getArticleList()
     {
-        $type_id = input('type_id/d');
-        $page = input('page/d',1);
-        $limit = input('limit/d',10);
-        if(!$type_id)
-        {
-            return $result = ['status'=>false,'msg'=>'缺少参数type_id'];
-        }
         $article = new Article();
-        return $article->articleList($type_id,$page,$limit);
+        $type_id = Request::param('type_id', false);
+        $page = Request::param('page', 1);
+        $limit = Request::param('limit', 10);
+
+        return $article->articleList($type_id, $page, $limit);
     }
 
+
     /**
-     *  获取单个文章的详细信息
-     * User:tianyu
-     * @return array
+     * 获取单个文章的详细信息
+     * @return array|mixed
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
     public function getArticleDetail()
     {
-        $article_id = input('article_id/d');
-        if(!$article_id)
-        {
-            return $result = ['status' => false,'mag' => '缺少参数article_id'];
-        }
+        $article_id = Request::param('article_id', 0);
+        if(!$article_id) return error_code(10051);
         $article = new Article();
         return $article->articleDetail($article_id);
     }

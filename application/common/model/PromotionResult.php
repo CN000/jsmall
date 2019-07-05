@@ -26,8 +26,43 @@ class PromotionResult extends Common
             'name' => '订单打X折',
             'type' => 'order',
         ],
-
+        'GOODS_HALF_PRICE' => [
+            'name' => '指定商品每第几件减指定金额',
+            'type' => 'goods',
+        ],
     ];
+
+
+    /**
+     * @param $code
+     * @param array $params
+     * @return string
+     */
+    public function getResultMsg($code, $params = [])
+    {
+        switch($code)
+        {
+            case 'GOODS_REDUCE':
+                $msg = '减'.$params['money'].'元 ';
+                break;
+            case 'GOODS_DISCOUNT':
+                $msg = '打'.$params['discount'].'折 ';
+                break;
+            case 'GOODS_ONE_PRICE':
+                $msg = '一口价'.$params['money'].'元 ';
+                break;
+            case 'ORDER_REDUCE':
+                $msg = '订单减'.$params['money'].'元 ';
+                break;
+            case 'ORDER_DISCOUNT':
+                $msg = '订单打'.$params['discount'].'折 ';
+                break;
+            case 'GOODS_HALF_PRICE':
+                $msg = '第'.$params['num'].'件'.$params['money'].'元';
+                break;
+        }
+        return $msg;
+    }
 
     //去计算结果
     public function toResult($resultInfo,&$cart, $promotionInfo)
@@ -39,12 +74,12 @@ class PromotionResult extends Common
             if($this->code[$resultInfo['code']]['type'] == 'goods'){
                 $conditionModel = new PromotionCondition();
                 foreach($cart['list'] as $k => $v){
-                    if($v['is_select']){
-                        $type = $conditionModel->goods_check($promotionInfo['id'],$v['products']['goods_id'],$v['nums']);
-                        if($type == 2){
-                            //到这里就说明此商品信息满足促销商品促销信息的条件，去计算结果
-                            //注意，在明细上面，就不细分促销的种类了，都放到一个上面，在订单上面才细分
-                            $promotionModel = $this->$method($params,$cart['list'][$k],$promotionInfo);
+                    $type = $conditionModel->goods_check($promotionInfo['id'],$v['products']['goods_id'],$v['nums']);
+                    if($type == 2){
+                        //到这里就说明此商品信息满足促销商品促销信息的条件，去计算结果
+                        //注意，在明细上面，就不细分促销的种类了，都放到一个上面，在订单上面才细分
+                        $promotionModel = $this->$method($params,$cart['list'][$k],$promotionInfo);
+                        if($v['is_select']){
                             //根据具体的促销类型取做对应的操作
                             switch ($promotionInfo['type']){
                                 case $promotionInfo::TYPE_PROMOTION:
@@ -72,10 +107,11 @@ class PromotionResult extends Common
                                     $cart['amount'] -= $promotionModel;
                                     break;
                             }
-
                         }
                     }
                 }
+                //商品促销可能做的比较狠，导致订单价格为负数了，这里判断一下，如果订单价格小于0了，就是0了
+                $cart['amount'] = $cart['amount']>0?$cart['amount']:0;
             }else{
                 $this->$method($params,$cart,$promotionInfo);
             }
@@ -297,6 +333,21 @@ class PromotionResult extends Common
         }
         return $info;
     }
+
+    public function getResultList($id)
+    {
+        $where[] = ['promotion_id', 'eq', $id];
+        $list = $this->where($where)->select();
+        if($list !== false && count($list)>0)
+        {
+            foreach($list as $k => &$v)
+            {
+                $v['params'] = json_decode($v['params'], true);
+            }
+        }
+        return $list;
+    }
+
     /**
      *  添加促销的条件
      * User:wht
@@ -428,6 +479,25 @@ class PromotionResult extends Common
                     return $result;
                 }
                 break;
+            case 'GOODS_HALF_PRICE':
+                if(!preg_match("/^[0-9]+(.[0-9]{1,2})?$/",$data['params']['money'])){
+                    $result['msg'] = "请正确输入金额，最多2位小数";
+                    return $result;
+                }
+                if($data['params']['money'] == '' || $data['params']['money'] == '0'){
+                    $result['msg'] = "请输入金额";
+                    return $result;
+                }
+
+                if($data['params']['num'] == '' || $data['params']['num'] == '0'){
+                    $result['msg'] = "请输入大于0的数字";
+                    return $result;
+                }
+                if(!($data['params']['num']>0)){
+                    $result['msg'] = "请输入大于0的数字";
+                    return $result;
+                }
+                break;
         }
         $result['status'] = true;
 
@@ -453,6 +523,30 @@ class PromotionResult extends Common
             $result['msg'] = '没有找到此促销记录';
             return $result;
         }
+    }
+
+    //第几件减去指定金额
+    private function result_GOODS_HALF_PRICE($params,&$v,$promotionInfo)
+    {
+        $promotionMoney = 0;
+        //判断是否满足件数
+        if($v['nums'] < $params['num']){
+            return $promotionMoney;
+        }
+        //此次商品促销一共优惠了多少钱
+        $times = floor($v['nums']/$params['num']);
+        if($times>0){
+            $promotionMoney =  $params['money']*$times;
+        }
+        //设置商品优惠总金额
+        if(!isset($v['products']['promotion_amount'])){
+            $v['products']['promotion_amount'] = 0;
+        }
+        $v['products']['promotion_amount'] += $promotionMoney;
+        //设置商品的实际销售金额（单品）
+        $v['products']['amount'] -= $promotionMoney;
+        $v['products']['amount'] = $v['products']['amount']>0?$v['products']['amount']:0;
+        return $promotionMoney;
     }
 
 }

@@ -9,6 +9,8 @@
 
 namespace app\common\model;
 
+use Illuminate\Support\Debug\Dumper;
+
 /**
  * 商品分类
  * Class GoodsCat
@@ -38,11 +40,9 @@ class GoodsCat extends Common
      */
     public function getList()
     {
-
         $data = $this->field('id, parent_id, name, type_id, sort, image_id')
             ->order([ 'sort' => 'asc'])
             ->select();
-
         $return_data = $this->getTree($data);
         return $return_data;
     }
@@ -52,6 +52,9 @@ class GoodsCat extends Common
      * 转换成树状
      * @param $data
      * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
     protected function getTree($data)
     {
@@ -122,18 +125,22 @@ class GoodsCat extends Common
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function getAllCat( $id = false)
+    public function getAllCat($id = false)
     {
         if($id)
         {
             $where[] = ['id', 'neq', $id];
             $where[] = ['parent_id', 'neq', $id];
         }
-
+        else
+        {
+            $where = [];
+        }
         $data = $this->field('id, parent_id, name, sort, image_id')
             ->where($where)
             ->order('sort asc')
             ->select();
+
         $return_data = $this->getTreeApi($data);
         return $return_data;
     }
@@ -143,6 +150,9 @@ class GoodsCat extends Common
      * API使用的树装
      * @param $data
      * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
     protected function getTreeApi($data)
     {
@@ -154,15 +164,23 @@ class GoodsCat extends Common
                 $new_data[$v['id']]['id'] = $v['id'];
                 $new_data[$v['id']]['name'] = $v['name'];
                 $new_data[$v['id']]['image_id'] = $v['image_id'];
-                if($v['image_id'])
+                if ($v['image_id'])
                 {
                     $new_data[$v['id']]['image_url'] = _sImage($v['image_id']);
                 }
+                else
+                {
+                    $new_data[$v['id']]['image_url'] = _sImage();
+                }
                 $new_data[$v['id']]['sort'] = $v['sort'];
+                $new_data[$v['id']]['child'] = [];
             }
-            else
+        }
+        foreach($data as $v)
+        {
+            if($v['parent_id'] != self::TOP_CLASS_PARENT_ID)
             {
-                if($v['image_id'])
+                if ($v['image_id'])
                 {
                     $new_data[$v['parent_id']]['child'][] = array(
                         'id' => $v['id'],
@@ -184,6 +202,14 @@ class GoodsCat extends Common
                 }
             }
         }
+
+        $edition = [];
+        foreach ((array)$new_data as $key => $val)
+        {
+            $edition[] = $val['sort'];
+        }
+        array_multisort($edition, SORT_ASC, $new_data);
+
         return $new_data;
     }
 
@@ -191,7 +217,10 @@ class GoodsCat extends Common
     /**
      * 获取图片
      * @param $image_id
-     * @return string
+     * @return array|mixed|string
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
     protected function getImage($image_id)
     {
@@ -401,9 +430,11 @@ class GoodsCat extends Common
      * 删除商品分类
      * @param $id
      * @return bool|int
+     * @throws \think\Exception
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
+     * @throws \think\exception\PDOException
      */
     public function del($id)
     {
@@ -444,6 +475,7 @@ class GoodsCat extends Common
 
         return $data;
     }
+
 
     /**
      * 根据名称获取分类信息
@@ -501,7 +533,16 @@ class GoodsCat extends Common
         return false;
     }
 
-    //根据最后一级id 获取分类信息
+
+    /**
+     * 根据最后一级id 获取分类信息
+     * @param $id
+     * @param array $data
+     * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
     public function getCatByLastId($id, $data = [])
     {
         $info   = $this->where(['id' => $id])->find();
@@ -511,6 +552,53 @@ class GoodsCat extends Common
         } else {
             return $data;
         }
+    }
 
+
+    /**
+     * 获取名称
+     * @param $id
+     * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function getNameById($id)
+    {
+        $return = [
+            'status' => false,
+            'msg' => '获取失败',
+            'data' => ''
+        ];
+        $where[] = ['id', 'eq', $id];
+        $info = $this->field('name')->where($where)->find();
+        if($info)
+        {
+            $return['status'] = true;
+            $return['msg'] = '获取成功';
+            $return['data'] = $info['name'];
+        }
+
+        return $return;
+    }
+
+    /***
+     * 获取当前分类以及所有上级分类id
+     * @param $id
+     * @return string
+     */
+    public function getCatIdsByLastId($id)
+    {
+        $ids     = $this->getCatByLastId($id);
+        $catInfo = _krsort($ids);
+        if ($catInfo) {
+            $ids = '';
+            foreach ($catInfo as $key => $value) {
+                $ids .= $value['id'] . ',';
+            }
+            return substr($ids, 0, -1);
+        } else {
+            return $id;
+        }
     }
 }

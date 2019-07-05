@@ -9,6 +9,8 @@
 namespace app\Manage\controller;
 
 use app\common\controller\Manage;
+use app\common\model\GoodsGrade;
+use app\common\model\UserGrade;
 use Request;
 use app\common\model\Goods as goodsModel;
 use app\common\model\GoodsType;
@@ -51,7 +53,7 @@ class Goods extends Manage
         $statics    = $goodsModel->staticGoods();
         $this->assign('statics', $statics);
         if (Request::isAjax()) {
-            $filter              = input('request.');
+            $filter = input('request.');
             return $goodsModel->tableData($filter);
         }
         return $this->fetch('index');
@@ -60,6 +62,14 @@ class Goods extends Manage
     public function add()
     {
         $this->_common();
+        //处理会员价
+        if ($this->view->gradelist) {
+            $gradelist = [];
+            foreach ($this->view->gradelist as $key => $value) {
+                $gradelist[$key]                = $value;
+                $gradelist[$key]['grade_price'] = 0;
+            }
+        }
         return $this->fetch('add');
     }
 
@@ -71,10 +81,6 @@ class Goods extends Manage
      */
     private function _common()
     {
-        //分类
-        $goodsCatModel = new GoodsCat();
-        $catList       = $goodsCatModel->getCatByParentId(0);
-        $this->assign('catList', $catList);
         //类型
         $goodsTypeModel = new GoodsType();
         $typeList       = $goodsTypeModel->getAllTypes(0);
@@ -84,6 +90,11 @@ class Goods extends Manage
         $brandModel = new Brand();
         $brandList  = $brandModel->getAllBrand();
         $this->assign('brandList', $brandList);
+
+        //会员等级
+        $gradeModel = new UserGrade();
+        $gradelist  = $gradeModel->getAll();
+        $this->assign('gradelist', $gradelist);
 
         hook('goodscommon', $this);//商品编辑、添加时增加钩子
 
@@ -131,6 +142,7 @@ class Goods extends Manage
             'status' => false,
             'msg'    => '',
             'data'   => '',
+            'token'  => \think\facade\Request::token('__Jshop_Token__', 'sha1')
         ];
         //商品数据组装并校检
         $checkData = $this->checkGoodsInfo();
@@ -152,8 +164,8 @@ class Goods extends Manage
         $open_spec = input('post.open_spec', 0);
         if ($open_spec) {
             //多规格
-            $product     = input('post.product/a', []);
-            $total_stock = $price = $costprice = $mktprice = 0;
+            $product       = input('post.product/a', []);
+            $total_stock   = $price = $costprice = $mktprice = 0;
             $isExitDefalut = false;
             foreach ($product as $key => $val) {
                 $tmp_product['goods']['price']        = isset($val['price']) ? $val['price'] : 0;
@@ -161,15 +173,17 @@ class Goods extends Manage
                 $tmp_product['goods']['mktprice']     = isset($val['mktprice']) ? $val['mktprice'] : 0;
                 $tmp_product['goods']['marketable']   = isset($val['marketable']) ? $val['marketable'] : $productsModel::MARKETABLE_DOWN;
                 $tmp_product['goods']['stock']        = isset($val['stock']) ? $val['stock'] : 0;
+				$tmp_product['goods']['stock_type']   = isset($val['stock_type']) ? $val['stock_type'] : '';
                 $sn                                   = get_sn(4);
                 $tmp_product['goods']['sn']           = isset($val['sn']) ? $val['sn'] : $sn;
                 $tmp_product['goods']['product_spes'] = $key;
+                $tmp_product['goods']['image_id']     = isset($val['image_id']) ? $val['image_id'] : '';
                 $tmp_product['goods']['is_defalut']   = isset($val['is_defalut']) ? $productsModel::DEFALUT_YES : $productsModel::DEFALUT_NO;
 
-                if($tmp_product['goods']['is_defalut'] == $productsModel::DEFALUT_YES ){
+                if ($tmp_product['goods']['is_defalut'] == $productsModel::DEFALUT_YES) {
                     $isExitDefalut = true;
                 }
-                $checkData                            = $this->checkProductInfo($tmp_product, $goods_id);
+                $checkData = $this->checkProductInfo($tmp_product, $goods_id);
                 if (!$checkData['status']) {
                     $result['msg'] = $checkData['msg'];
                     $goodsModel->rollback();
@@ -182,20 +196,19 @@ class Goods extends Manage
                     $result['msg'] = '货品数据保存失败';
                     return $result;
                 }
-                $total_stock = $total_stock + $tmp_product['goods']['stock'];
                 if ($tmp_product['goods']['is_defalut'] == $productsModel::DEFALUT_YES) {//todo 取商品默认价格
                     $price     = $tmp_product['goods']['price'];
                     $costprice = $tmp_product['goods']['costprice'];
                     $mktprice  = $tmp_product['goods']['mktprice'];
                 }
             }
-            if(!$isExitDefalut){
+            if (!$isExitDefalut) {
                 $result['msg'] = '请选择默认货品';
                 $goodsModel->rollback();
                 return $result;
             }
             //更新总库存
-            $upData['stock']     = $total_stock;
+            //$upData['stock']     = $total_stock;
             $upData['price']     = $price;
             $upData['costprice'] = $costprice;
             $upData['mktprice']  = $mktprice;
@@ -220,6 +233,26 @@ class Goods extends Manage
                 return $result;
             }
         }
+        //保存会员价
+        $grade_price = input('post.goods.grade_price/a', []);
+        if ($grade_price) {
+            $grade_price_arr = [];
+            foreach ($grade_price as $key => $value) {
+                $grade_price_arr[] = [
+                    'goods_id'    => $goods_id,
+                    'grade_id'    => $key,
+                    'grade_price' => $value,
+                ];
+            }
+            $goodsGrade = new GoodsGrade();
+            $goodsGrade->where(['goods_id' => $goods_id])->delete();
+            if (!$goodsGrade->saveAll($grade_price_arr)) {
+                $goodsModel->rollback();
+                $result['msg'] = '会员价保存失败';
+                return $result;
+            }
+        }
+
         //保存图片
         if (isset($data['images']) && count($data['images']) > 1) {
             $imgRelData = [];
@@ -230,6 +263,7 @@ class Goods extends Manage
                 }
                 $imgRelData[$i]['goods_id'] = $goods_id;
                 $imgRelData[$i]['image_id'] = $val;
+                $imgRelData[$i]['sort']     = $i;
                 $i++;
             }
             $goodsImagesModel = new GoodsImages();
@@ -239,9 +273,18 @@ class Goods extends Manage
                 return $result;
             }
         }
+        //更新商品总库存
+        $total_stock = $productsModel->where([['goods_id','=',$goods_id]])->sum('stock');
+        $upDataGoods['stock']  = $total_stock;
+        $res = $goodsModel->updateGoods($goods_id, $upDataGoods);
+        if($res === false){
+            $goodsModel->rollback();
+            $result['msg'] = '总库存更新失败';
+            return $result;
+        }
         $goodsModel->commit();
 
-        array_push($data,['goods_id'=>$goods_id]);
+        array_push($data, ['goods_id' => $goods_id]);
         hook('addgoodsafter', $data);//添加商品后增加钩子
 
         $result['msg']    = '保存成功';
@@ -261,46 +304,49 @@ class Goods extends Manage
             'status' => false,
             'msg'    => '',
             'data'   => '',
+            'token'  => \think\facade\Request::token('__Jshop_Token__', 'sha1')
         ];
         $bn                             = get_sn(3);
         $data['goods']['name']          = input('post.goods.name', '');
-        $goods_cat_id                   = input('post.goods_cat_id/a');
-        $goods_cat_id                   = array_filter($goods_cat_id);
-        $data['goods']['goods_cat_id']  = $goods_cat_id[count($goods_cat_id)-1];
+        $data['goods']['goods_cat_id']  = input('post.goods_cat_id', '0');
         $data['goods']['goods_type_id'] = input('post.goods_type_id', 0);
         $data['goods']['brand_id']      = input('post.goods.brand_id', 0);
         $data['goods']['bn']            = input('post.goods.bn', $bn);
-        $data['goods']['brief']         = input('post.goods.brief', '');
-        $data['goods']['intro']         = input('post.goods.intro', '');
-        $data['goods']['price']         = input('post.goods.price', '');
-        $data['goods']['costprice']     = input('post.goods.costprice', '');
-        $data['goods']['mktprice']      = input('post.goods.mktprice', '');
-        $data['goods']['weight']        = input('post.goods.weight', '');
-        $data['goods']['stock']         = input('post.goods.stock', '');
-        $data['goods']['unit']          = input('post.goods.unit', '');
-        $data['goods']['marketable']    = input('post.goods.marketable', '2');
-        $data['goods']['is_recommend']  = input('post.goods.is_recommend', '2');
-        $data['goods']['is_hot']        = input('post.goods.is_hot', '2');
-        $open_spec                      = input('post.open_spec', 0);
-        $specdesc                       = input('post.spec/a', []);
-
+        if (empty($data['goods']['bn'])) {
+            $data['goods']['bn'] = $bn;
+        }
+        $data['goods']['brief']        = input('post.goods.brief', '');
+        $data['goods']['intro']        = input('post.goods.intro', '');
+        $data['goods']['price']        = input('post.goods.price', '');
+        $data['goods']['costprice']    = input('post.goods.costprice', '');
+        $data['goods']['mktprice']     = input('post.goods.mktprice', '');
+        $data['goods']['weight']       = input('post.goods.weight', '');
+        $data['goods']['stock']        = input('post.goods.stock', '');
+        $data['goods']['stock_type']   = input('post.goods.stock_type', '');//库存更新类型
+        $data['goods']['unit']         = input('post.goods.unit', '');
+        $data['goods']['marketable']   = input('post.goods.marketable', '2');
+        $data['goods']['is_recommend'] = input('post.goods.is_recommend', '2');
+        $data['goods']['is_hot']       = input('post.goods.is_hot', '2');
+        $open_spec                     = input('post.open_spec', 0);
+        $specdesc                      = input('post.spec/a', []);
+        $new_spec                      = input('post.goods.new_spec/a', []);//自定义规格
         if ($specdesc && $open_spec) {
-            if(count($specdesc) == 1){//优化只一个规格的情况
-                $product = input('post.product/a',[]);
-                foreach((array)$specdesc as $key=>$val){
-                    foreach($val as $k=>$v){
-                        $temp_product_key  = $key.':'.$v;
-                        if(!isset($product[$temp_product_key])){
+            if (count($specdesc) == 1) {//优化只一个规格的情况
+                $product = input('post.product/a', []);
+                foreach ((array)$specdesc as $key => $val) {
+                    foreach ($val as $k => $v) {
+                        $temp_product_key = $key . ':' . $v;
+                        if (!isset($product[$temp_product_key])) {
                             unset($specdesc[$key][$k]);
                         }
                     }
                 }
             }
             $data['goods']['spes_desc'] = serialize($specdesc);
+            $data['goods']['new_spec']  = serialize($new_spec);
         } else {
             $data['goods']['spes_desc'] = '';
         }
-
         //商品参数处理
         $params     = [];
         $tempParams = input('post.goods.params/a', []);
@@ -310,12 +356,12 @@ class Goods extends Manage
                     foreach ($val as $vk => $vv) {
                         $params[$key][] = $vk;
                     }
-                } elseif($val!=='') {
+                } elseif ($val !== '') {
                     $params[$key] = $val;
                 }
             }
             $data['goods']['params'] = serialize($params);
-        }else{
+        } else {
             $data['goods']['params'] = '';
         }
         $images = input('post.goods.img/a', []);
@@ -323,7 +369,7 @@ class Goods extends Manage
             $result['msg'] = '请先上传图片';
             return $result;
         }
-        $data['goods']['image_id'] = $images[0];
+        $data['goods']['image_id'] = reset($images);
         $data['images']            = $images;
         $goodsModel                = new goodsModel();
 
@@ -341,6 +387,7 @@ class Goods extends Manage
                 return $result;
             }
         }
+
         $result['data']   = $data;
         $result['status'] = true;
         return $result;
@@ -372,10 +419,15 @@ class Goods extends Manage
         $data['product']['mktprice']   = $data['goods']['mktprice'];//货品市场价
         $data['product']['marketable'] = $data['goods']['marketable'];//是否上架
         $data['product']['stock']      = $data['goods']['stock'];//货品库存
+        $data['product']['stock_type'] = $data['goods']['stock_type'];//货品库存
+        $data['product']['image_id']   = $data['goods']['image_id'];//货品图片
         $data['product']['is_defalut'] = $data['goods']['is_defalut'] ? $data['goods']['is_defalut'] : $productsModel::DEFALUT_YES;//是否默认货品
         $open_spec                     = input('post.open_spec', 0);
         if ($open_spec && $data['goods']['product_spes']) {
             $data['product']['spes_desc'] = $data['goods']['product_spes'];
+        }
+        if (!$data['product']['sn']) {
+            $data['product']['sn'] = get_sn(4);
         }
         if ($isEdit) {
             $validate = new ProductsValidate();
@@ -416,10 +468,9 @@ class Goods extends Manage
         $goodsTypeModel = new GoodsType();
         $res            = $goodsTypeModel->getTypeValue($type_id);
 
-        $html = '';
-
+        $html       = '';
+        $customSpec = false;//是否可以使用自定义规格
         if ($res['status'] == true) {
-
             $this->assign('typeInfo', $res['data']);
             if (!$res['data']['spec']->isEmpty()) {
                 $spec = [];
@@ -428,7 +479,12 @@ class Goods extends Manage
                     $spec[$key]['specValue'] = $val['spec']['getSpecValue'];
                 }
                 $this->assign('spec', $spec);
+                if (count($spec) <= 2) {//规格超过2种的，不允许自定义
+                    $customSpec = true;
+                }
             }
+            $this->assign('customSpec', $customSpec);
+
             if ($res['data']['spec']->isEmpty()) {
                 $this->assign('canOpenSpec', 'false');
             } else {
@@ -473,6 +529,7 @@ class Goods extends Manage
             }
             $products = $goods['data']->products;
         }
+
         if ($spec) {
             $specValue = [];
             $total     = count($spec);
@@ -480,6 +537,7 @@ class Goods extends Manage
                 $this->spec[] = $key;
             }
             $items = $this->getSkuItem($spec, -1);
+
             foreach ((array)$items as $key => $val) {
                 $items[$key]['price']     = $goodsDefault['price'];
                 $items[$key]['costprice'] = $goodsDefault['costprice'];
@@ -505,6 +563,7 @@ class Goods extends Manage
         $html             = $this->fetch('getSpecHtml');
         $result['data']   = $html;
         $result['status'] = true;
+        $result['msg']    = '获取成功';
         return $result;
 
     }
@@ -578,7 +637,6 @@ class Goods extends Manage
         $this->assign('open_spec', '0');
         $this->assign('data', $goods['data']);
         $this->assign('products', $goods['data']['products']);
-
         if ($goods['data']['spes_desc'] != '') {
             $this->assign('open_spec', '1');
         } else {
@@ -589,15 +647,29 @@ class Goods extends Manage
         $res            = $this->getEditSpec($goods['data']['goods_type_id'], $goods['data']);
         $this->assign('spec_html', $res['data']);
         $goodsCatModel = new GoodsCat();
-
-        $catInfo       = $goodsCatModel->getCatByLastId($goods['data']['goods_cat_id']);
-        $catInfo = _krsort($catInfo);
-        $this->assign('catInfo',$catInfo);
-
-        $secondCat = $goodsCatModel->getCatByParentId($catInfo[0]['id']);
-        $this->assign('secondCat', $secondCat);
+        $catids        = $goodsCatModel->getCatIdsByLastId($goods['data']['goods_cat_id']);
+        $this->assign('catids', $catids);
 
         $this->_common();
+        //处理会员价
+        $goodsGradeModel = new GoodsGrade();
+        $goodsGrade      = $goodsGradeModel->getGradePrice($goods_id);
+        if ($this->view->gradelist) {
+            $gradelist = [];
+            foreach ($this->view->gradelist as $key => $value) {
+                $gradelist[$key] = $value;
+                if ($goodsGrade['status']) {
+                    foreach ($goodsGrade['data'] as $k => $v) {
+                        if ($value['id'] == $v['grade_id']) {
+                            $gradelist[$key]['grade_price'] = $v['grade_price'];
+                        }
+                    }
+                } else {
+                    $gradelist[$key]['grade_price'] = 0;
+                }
+            }
+        }
+        $this->assign('gradelist', $gradelist);
         return $this->fetch('edit');
     }
 
@@ -617,7 +689,6 @@ class Goods extends Manage
             $result['msg'] = $checkData['msg'];
             return $result;
         }
-
         $data = $checkData['data'];
         //验证商品数据
         $goodsModel    = new goodsModel();
@@ -638,11 +709,11 @@ class Goods extends Manage
 
         if ($open_spec) {
             //多规格
-            $product     = input('post.product/a', []);
-            $total_stock = $price = $costprice = $mktprice = 0;
+            $product       = input('post.product/a', []);
+            $total_stock   = $price = $costprice = $mktprice = 0;
             $isExitDefalut = false;
-            $exit_product = [];
-            if(isset($product['id'])&&$product['id']){
+            $exit_product  = [];
+            if (isset($product['id']) && !$product['id']) {
                 unset($product['id']);
             }
 
@@ -652,17 +723,20 @@ class Goods extends Manage
                 $tmp_product['goods']['mktprice']     = !empty($val['mktprice']) ? $val['mktprice'] : 0;
                 $tmp_product['goods']['marketable']   = !empty($val['marketable']) ? $val['marketable'] : $productsModel::MARKETABLE_UP;
                 $tmp_product['goods']['stock']        = !empty($val['stock']) ? $val['stock'] : 0;
+                $tmp_product['goods']['stock_type']   = isset($val['stock_type']) ? $val['stock_type'] : '';
                 $sn                                   = get_sn(4);
                 $tmp_product['goods']['sn']           = !empty($val['sn']) ? $val['sn'] : $sn;
                 $tmp_product['goods']['product_spes'] = $key;
+                $tmp_product['goods']['image_id']     = !empty($val['image_id']) ? $val['image_id'] : '';
                 $tmp_product['goods']['is_defalut']   = !empty($val['is_defalut']) ? $productsModel::DEFALUT_YES : $productsModel::DEFALUT_NO;
-                if($tmp_product['goods']['is_defalut'] == $productsModel::DEFALUT_YES ){
+                if ($tmp_product['goods']['is_defalut'] == $productsModel::DEFALUT_YES) {
                     $isExitDefalut = true;
                 }
 
-                if (isset($val['id'])) {
+                if (isset($val['id']) && $val['id']) {
                     $tmp_product['product']['id'] = $val['id'];
                     $checkData                    = $this->checkProductInfo($tmp_product, $goods_id, true);
+
                 } else {
                     unset($tmp_product['product']['id']);
                     $checkData = $this->checkProductInfo($tmp_product, $goods_id);
@@ -674,18 +748,19 @@ class Goods extends Manage
                 }
                 $data['product'] = $checkData['data']['product'];
 
-                if (isset($val['id'])&&$val['id']) {
+                if (isset($val['id']) && $val['id']) {
+
                     $productRes = $productsModel->updateProduct($val['id'], $data['product']);
                     if (in_array($val['id'], $productIds)) {
                         $productIds = unsetByValue($productIds, $val['id']);
                     }
-                    if($val['id']){
+                    if ($val['id']) {
                         $exit_product[] = $val['id'];
                     }
                 } else {
                     unset($data['product']['id']);
                     $productRes = $productsModel->doAdd($data['product']);
-                    if(is_numeric($productRes)){
+                    if (is_numeric($productRes)) {
                         $exit_product[] = $productRes;
                     }
                 }
@@ -695,27 +770,26 @@ class Goods extends Manage
                     return $result;
                 }
 
-                $total_stock = $total_stock + $tmp_product['goods']['stock'];
+                //$total_stock = $total_stock + $tmp_product['goods']['stock'];
                 if ($tmp_product['goods']['is_defalut'] == $productsModel::DEFALUT_YES) {//todo 取商品默认价格
                     $price     = $tmp_product['goods']['price'];
                     $costprice = $tmp_product['goods']['costprice'];
                     $mktprice  = $tmp_product['goods']['mktprice'];
                 }
             }
-
-            if(!$isExitDefalut){
+            if (!$isExitDefalut) {
                 $result['msg'] = '请选择默认货品';
                 $goodsModel->rollback();
                 return $result;
             }
-            //更新总库存
-            $upData['stock']     = $total_stock;
+            //更新商品信息
+            //$upData['stock']     = $total_stock;
             $upData['price']     = $price;
             $upData['costprice'] = $costprice;
             $upData['mktprice']  = $mktprice;
             $goodsModel->updateGoods($goods_id, $upData);
             //删除多余规格
-            $productsModel->where([['id','not in',$exit_product],['goods_id','=',$goods_id]])->delete();
+            $productsModel->where([['id', 'not in', $exit_product], ['goods_id', '=', $goods_id]])->delete();
         } else {
             $sn                          = get_sn(4);
             $data['goods']['sn']         = input('post.goods.sn', $sn);//货品编码
@@ -753,6 +827,26 @@ class Goods extends Manage
         if ($productIds) {
             $productsModel->deleteProduct($productIds);
         }
+        //保存会员价
+        $grade_price = input('post.goods.grade_price/a', []);
+        if ($grade_price) {
+            $grade_price_arr = [];
+            foreach ($grade_price as $key => $value) {
+                $grade_price_arr[] = [
+                    'goods_id'    => $goods_id,
+                    'grade_id'    => $key,
+                    'grade_price' => $value,
+                ];
+            }
+            $goodsGrade = new GoodsGrade();
+            $goodsGrade->where(['goods_id' => $goods_id])->delete();
+            if (!$goodsGrade->saveAll($grade_price_arr)) {
+                $goodsModel->rollback();
+                $result['msg'] = '会员价保存失败';
+                return $result;
+            }
+        }
+
         //保存图片
         if (isset($data['images']) && count($data['images']) >= 1) {
             $imgRelData = [];
@@ -763,6 +857,7 @@ class Goods extends Manage
                 }
                 $imgRelData[$i]['goods_id'] = $goods_id;
                 $imgRelData[$i]['image_id'] = $val;
+                $imgRelData[$i]['sort']     = $i;
                 $i++;
             }
             $goodsImagesModel = new GoodsImages();
@@ -772,6 +867,18 @@ class Goods extends Manage
                 return $result;
             }
         }
+
+        //更新商品总库存
+        $total_stock = $productsModel->where([['goods_id','=',$goods_id]])->sum('stock');
+        $upDataGoods['stock']  = $total_stock;
+
+        $res = $goodsModel->updateGoods($goods_id, $upDataGoods);
+        if($res === false){
+            $goodsModel->rollback();
+            $result['msg'] = '总库存更新失败';
+            return $result;
+        }
+
         $goodsModel->commit();
         hook('editgoodsafter', $data);//编辑商品后增加钩子
         $result['msg']    = '保存成功';
@@ -792,7 +899,7 @@ class Goods extends Manage
             'msg'    => '关键参数丢失',
             'data'   => '',
         ];
-        $goods_id   = input("id");
+        $goods_id   = input("post.id");
         $goodsModel = new goodsModel();
         if (!$goods_id) {
             return $result;
@@ -811,45 +918,52 @@ class Goods extends Manage
     {
         $result = [
             'status' => false,
-            'msg'    => '关键参数丢失',
+            'msg'    => '获取成功',
             'data'   => '',
         ];
         if (!$type_id) {
             return $result;
         }
         $spes_desc = unserialize($goods['spes_desc']);
+        $new_spec  = unserialize($goods['new_spec']);
+
         $this->assign('goods', $goods);
         $goodsTypeModel = new GoodsType();
         $res            = $goodsTypeModel->getTypeValue($type_id);
 
-        $html = '';
-
+        $html       = '';
+        $customSpec = false;//是否可以使用自定义规格
         if ($res['status'] == true) {
-
             $this->assign('typeInfo', $res['data']);
             if (!$res['data']['spec']->isEmpty()) {
                 $spec = [];
                 foreach ($res['data']['spec']->toArray() as $key => $val) {
                     $spec[$key]['name']      = $val['spec']['name'];
                     $spec[$key]['specValue'] = $val['spec']['getSpecValue'];
+
                     if ($spes_desc) {
                         foreach ((array)$spec[$key]['specValue'] as $vkey => $vval) {
                             $spec[$key]['specValue'][$vkey]['isSelected'] = 'false';
+                            if (isset($new_spec[$vval['id']])) {
+                                $vval['value']                           = $new_spec[$vval['id']][0];
+                                $spec[$key]['specValue'][$vkey]['value'] = $new_spec[$vval['id']][0];
+                            }
                             foreach ($spes_desc as $gk => $gv) {
                                 foreach ($gv as $v) {
                                     if ($v == $vval['value']) {
                                         $spec[$key]['specValue'][$vkey]['isSelected'] = 'true';
                                     }
                                 }
-
                             }
-
                         }
                     }
-
                 }
                 $this->assign('spec', $spec);
+                if (count($spec) <= 2) {//规格超过2种的，不允许自定义
+                    $customSpec = true;
+                }
             }
+            $this->assign('customSpec', $customSpec);
             if ($res['data']['spec']->isEmpty()) {
                 $this->assign('canOpenSpec', 'false');
             } else {

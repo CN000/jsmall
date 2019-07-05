@@ -3,11 +3,14 @@
         <navbar slot="navbar" :title="$route.meta.title" v-show="$route.meta.navShow"></navbar>
         <transition name="router-fade" mode="out-in">
             <keep-alive>
-                <router-view v-if="$route.meta.keepAlive" class="top"></router-view>
+                <router-view v-if="$route.meta.keepAlive && isRouterAlive" class="top"></router-view>
             </keep-alive>
         </transition>
         <transition name="router-fade" mode="out-in">
-            <router-view v-if="!$route.meta.keepAlive" class="top"></router-view>
+            <router-view v-if="!isRouterAlive && !$route.meta.keepAlive" class="top"></router-view>
+        </transition>
+        <transition name="router-fade" mode="out-in">
+            <router-view v-if="isRouterAlive && !$route.meta.keepAlive" class="top"></router-view>
         </transition>
         <tabbar slot="tabbar" v-show="$route.meta.tabShow"></tabbar>
     </yd-layout>
@@ -16,40 +19,65 @@
 <script>
 import navbar from './components/NavBar.vue'
 import tabbar from './components/TabBar.vue'
+import {mapGetters} from 'vuex'
 
 export default {
+    data () {
+        return {
+            isRouterAlive: true
+        }
+    },
     components: {
         navbar, tabbar
     },
+    computed: {
+        ...mapGetters([
+            'shopName',
+            'shopDesc',
+            'shopLogo',
+			'statistics'
+        ])
+    },
+    beforeMount () {
+        this.getShopSetting();
+    },
+    provide () {
+        return {
+            reload: this.reload
+        }
+    },
     methods: {
-        getShopName () {
-            var shop_name = ''
-            this.$api.getSetting({key: 'shop_name'}, res => {
-                if (res.data !== '') {
-                    this.GLOBAL.setStorage('shop_name', res.data)
+        // 获取店铺配置 存入vuex
+        getShopSetting () {
+            this.$api.shopConfig().then(res => {
+                this.$store.dispatch('shopConfig', res)
+                if (this.$route.path === '/index') {
+                    document.title = this.shopName
                 }
-                shop_name = res.data
+                //百度统计
+                if(res.statistics){
+                    var script=document.createElement("script");
+                    script.innerHTML = res.statistics;
+                    document.getElementsByTagName("body")[0].appendChild(script);
+                }
+            });
+        },
+        reload () {
+            this.isRouterAlive = false
+            this.$nextTick(() => {
+                this.isRouterAlive = true
             })
-            return shop_name
         }
     },
     watch: {
-        '$route' :{
+        '$route': {
             handler () {
-                if (this.$route.path === '/index') {
-                    document.title = this.GLOBAL.getStorage('shop_name')
-                    ? this.GLOBAL.getStorage('shop_name')
-                    : this.getShopName()
-                }
+                document.title = this.$route.path === '/index' ? this.shopName : this.$route.meta.title
             }
         }
-    },
-    beforeDestroy() {
-        this.GLOBAL.removeStorage('shop_name')
     }
 }
 </script>
-
 <style>
 #app {
   font-family: 'Avenir', Helvetica, Arial, sans-serif;

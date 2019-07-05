@@ -17,7 +17,7 @@ Page({
     reason_size:0,
     image_max: app.config.image_max,    //用于前台判断上传图片按钮是否显示
     refund_input_noedit: true,
-    mode: 'aspectFit',
+    mode: 'aspectFill',
   },
   
   //生命周期函数--监听页面加载
@@ -27,10 +27,10 @@ Page({
     app.api.aftersalesStatus(options.order_id, function (res) {
       if (res.status) {
         //如果不是未支付的，已取消的，已完成的状态，就都可以售后
-        if (res.data.text_status != 'pending_payment' && res.data.text_status != 'completed' && res.data.text_status != 'cancel'){
+        if (res.data.text_status != 1 && res.data.text_status != 6 && res.data.text_status != 7){
           //判断是已付款未发货，如果是，就禁用退货
-          if (res.data.text_status == 'pending_delivery'){
-            var type_list = page.data.type_list;
+          var type_list = page.data.type_list;
+          if (res.data.text_status == 2){
             type_list[1].disabled = true; 
           }
 
@@ -51,7 +51,6 @@ Page({
             refund_show: res.data.payed - res.data.refunded,
             type_list:type_list,
           });
-          //console.log(page.data);
         }else{
           app.common.errorToBack('订单不可以进行售后');
         }
@@ -99,7 +98,6 @@ Page({
 
   //选择服务类型
   // radioChange: function (e) {
-  //   console.log();
   //   // this.setData({
   //   //   aftersale_type: e.datail.value
   //   // });
@@ -132,7 +130,6 @@ Page({
         page.setData({
           images: page.data.images.concat(res.data)
         });
-        //console.log(page.data.images);
       });
     }
   },

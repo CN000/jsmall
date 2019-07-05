@@ -19,10 +19,10 @@
                 <span slot="left">验证码：</span>
                 <yd-input slot="right" v-model="code" placeholder="请输入短信验证码"></yd-input>
             </yd-cell-item>
-            <yd-cell-item>
-                <span slot="left">密码：</span>
-                <yd-input slot="right" type="password" v-model="pwd" placeholder="请输入密码"></yd-input>
-            </yd-cell-item>
+            <!--<yd-cell-item>-->
+                <!--<span slot="left">密码：</span>-->
+                <!--<yd-input slot="right" type="password" v-model="pwd" placeholder="请输入密码"></yd-input>-->
+            <!--</yd-cell-item>-->
         </yd-cell-group>
         <yd-button size="large" type="danger" @click.native="reg">绑定</yd-button>
     </div>
@@ -32,12 +32,11 @@
 export default {
     data () {
         return {
-            pid: '', // 邀请码
+            invitecode: this.GLOBAL.getStorage('invitecode') || '', // 邀请码
             mobile: '',
-            pwd: '',
+            // pwd: '',
             code: '', // 验证码
-            countDown: false, // 发送验证码倒计时 发送成功后修改为true倒计时启动
-            params: this.$route.query.code
+            countDown: false // 发送验证码倒计时 发送成功后修改为true倒计时启动
         }
     },
     created () {
@@ -50,11 +49,6 @@ export default {
                 }
             })
         }
-        if (this.$route.query.pid) {
-            this.GLOBAL.setStorage('pid', this.$route.query.pid)
-            this.GLOBAL.setStorage('time', new Date().getTime() + 60 * 60 * 24)
-        }
-        this.pid = this.GLOBAL.getStorage('pid') || 0
     },
     computed: {
         checkMobile () {
@@ -94,21 +88,19 @@ export default {
                 this.$dialog.toast({mes: this.checkMobile.msg, timeout: 1300})
             } else if (!this.code) {
                 this.$dialog.toast({mes: '请输入短信验证码', timeout: 1300})
-            } else if (!this.pwd) {
-                this.$dialog.toast({mes: '请输入登录密码', timeout: 1300})
             } else {
-                let data = {mobile: this.mobile, code: this.code, password: this.pwd}
-                // 如果pid为真 往data对象赋值
-                if (this.pid) data.pid = this.pid
-                data['params'] = this.params
+                let data = {mobile: this.mobile, code: this.code}
+                if (this.invitecode) data.invitecode = this.invitecode
+                data['uuid'] = this.GLOBAL.getStorage('uuid')
                 this.$api.trustBind(data, res => {
                     if (res.status) {
                         this.GLOBAL.setStorage('user_token', res.data)
                         this.$dialog.toast({
-                            mes: '注册成功!',
+                            mes: '绑定成功!',
                             timeout: 1000,
                             icon: 'success',
                             callback: () => {
+                                this.GLOBAL.removeStorage('uuid')
                                 this.$router.replace('/index')
                             }
                         })

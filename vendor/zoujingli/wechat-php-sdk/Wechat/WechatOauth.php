@@ -47,12 +47,11 @@ class WechatOauth extends Common
      * 通过 code 获取 AccessToken 和 openid
      * @return bool|array
      */
-    public function getOauthAccessToken($params = array())
+    public function getOauthAccessToken($params = [])
     {
-        if(isset($params['code'])){
+        $code = isset($_REQUEST['code']) ? $_REQUEST['code'] : '';
+        if(!$code){
             $code = $params['code'];
-        }else{
-            $code = isset($_GET['code']) ? $_GET['code'] : '';
         }
         if (empty($code)) {
             Tools::log("getOauthAccessToken Fail, Because there is no access to the code value in get.", "MSG - {$this->appid}");

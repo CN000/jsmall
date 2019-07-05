@@ -9,6 +9,7 @@
                             <p class="header-left">订单号：{{ item.order_id }}</p>
                             <p class="header-right" v-if="item.status === 1 && item.pay_status === 1">待付款</p>
                             <p class="header-right" v-if="item.status === 1 && item.pay_status === 2 && item.ship_status === 1">待发货</p>
+                            <p class="header-right" v-if="item.status === 1 && item.pay_status === 4">售后单</p>
                             <p class="header-right" v-if="item.status === 1 && item.pay_status === 2 && item.ship_status === 3 && item.confirm === 1">待收货</p>
                             <p class="header-right" style="color: #e6a200" v-if="item.status === 1 && item.pay_status === 2 && item.ship_status === 3 && item.confirm === 2 && item.is_comment === 1">待评价</p>
                             <p class="header-right" style="color: #0575f2" v-if="item.status === 1 && item.pay_status === 2 && item.ship_status === 3 && item.confirm === 2 && item.is_comment === 2">已评价</p>
@@ -39,7 +40,7 @@
                             </div>
                             <div class="footer-bottom" v-else-if="item.status === 1 && item.pay_status === 2 && item.ship_status === 3 && item.confirm === 1">
                                 <yd-button type="hollow" shape="circle" class="left-btn" @click.native="showDetail(item.order_id)">查看</yd-button>
-                                <yd-button type="hollow" shape="circle" class="left-btn" @click.native="logistics(item.order_id)">物流信息</yd-button>
+                                <!--<yd-button type="hollow" shape="circle" class="left-btn" @click.native="logistics(item.order_id)">物流信息</yd-button>-->
                                 <yd-button type="hollow" shape="circle" class="right-btn" @click.native="confirm(item.order_id)">确认收货</yd-button>
                             </div>
                             <div class="footer-bottom" v-else-if="item.status === 1 && item.pay_status === 2 && item.ship_status === 3 && item.confirm === 2 && item.is_comment === 1">
@@ -60,8 +61,8 @@
                 <div class="express-num">{{ logisticsInfo.company }}：{{ logisticsInfo.no }}</div>
                 <yd-timeline>
                     <yd-timeline-item v-for="(item, index) in logisticsInfo.list" :key="index">
-                        <p>{{ item.remark }}</p>
-                        <p style="margin-top: 10px;">{{ item.datetime }}</p>
+                        <p>{{ item.context }}</p>
+                        <p style="margin-top: 10px;">{{ item.time }}</p>
                     </yd-timeline-item>
                 </yd-timeline>
             </div>
@@ -74,6 +75,7 @@ export default {
     data () {
         return {
             intTab: parseInt(this.tab),
+            page: 1,
             pageSize: 5,
             items: [
                 {
@@ -181,9 +183,11 @@ export default {
                                 order_id: id
                             }, res => {
                                 if (res.status) {
-                                    this.$dialog.toast({mes: res.msg, icon: 'success', timeout: 1000})
-                                } else {
-                                    this.$dialog.toast({mes: res.msg, icon: 'error', timeout: 1000})
+                                    this.$dialog.toast({
+                                        mes: res.msg,
+                                        icon: 'success',
+                                        timeout: 1000
+                                    })
                                 }
                             })
                         }

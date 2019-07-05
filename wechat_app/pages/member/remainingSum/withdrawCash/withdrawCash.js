@@ -15,24 +15,29 @@ Page({
     // 获取余额
     getUserBalance: function () {
         let page = this;
-        app.db.userToken(function (token) {
-            app.api.userInfo(function (res) {
-                if (res.status) {
-                    page.setData({
-                        balance: res.data.balance
-                    });
-                } else {
-                    wx.showModal({
-                        title: '提示',
-                        content: '账号余额数据获取失败，请返回稍后查询',
-                        showCancel: false,
-                        complete: function () {
-                            wx.navigateBack(1);
-                        }
-                    });
-                }
-            });
+        app.api.userInfo(function (res) {
+            if (res.status) {
+                page.setData({
+                    balance: res.data.balance
+                });
+            } else {
+                wx.showModal({
+                    title: '提示',
+                    content: '账号余额数据获取失败，请返回稍后查询',
+                    showCancel: false,
+                    complete: function () {
+                        wx.navigateBack(1);
+                    }
+                });
+            }
         });
+    },
+
+    // 充值
+  recharge: function () {
+      wx.navigateTo({
+        url: '../withdrawCash/recharge?money=' + this.data.balance
+      });
     },
 
     // 提现
@@ -51,8 +56,18 @@ Page({
 
     // 提现记录
     cashlist: function () {
+        // wx.navigateTo({
+        //     url: '../withdrawCash/balanceList'
+        // });
         wx.navigateTo({
-        url: '../withdrawCash/cashList'
+            url: '../withdrawCash/cashList'
         });
-    }
+    },
+
+    // 我的银行卡
+    mybackcardlist: function () {
+      wx.navigateTo({
+        url: '../../myBankCardlist/myBankCardlist'
+      });
+    },
 })

@@ -20,13 +20,11 @@ class Brand extends Common
 
     protected $rule = [
         'name'          => 'require|max:50',
-        'logo'          => 'require',
         'sort'          => 'number',
     ];
     protected $msg = [
         'name.require'  => '请输入品牌名称',
         'name.max'      => '品牌名称长度最大50位',
-        'logo.require'  => '请选择要上传的品牌图片',
         'sort'          => '排序必须为数字'
     ];
 
@@ -70,7 +68,8 @@ class Brand extends Common
         $result = [
             'status' => true,
             'msg' => '保存成功',
-            'data'=> []
+            'data'=> [],
+            'token'  => \think\facade\Request::token('__Jshop_Token__', 'sha1')
         ];
         $validate = new Validate($this->rule,$this->msg);
         if (!$validate->check($data)) {
@@ -123,9 +122,10 @@ class Brand extends Common
             $where[] = ['name', 'like', '%'.$post['name'].'%'];
         }
         if(isset($post['utime']) && $post['utime'] != ""){
-            $stime = strtotime($post['utime'].'00:00:00',time());
-            $etime = strtotime($post['utime'].'23:59:59',time());
-            $where[] = ['utime', ['EGT',$stime],['ELT',$etime],'and'];
+            $date_array = explode('到',$post['utime']);
+            $sutime = strtotime($date_array[0].'00:00:00',time());
+            $eutime = strtotime($date_array[1].'23:59:59',time());
+            $where[] = ['utime', ['EGT',$sutime],['ELT',$eutime],'and'];
         }
         $result['where'] = $where;
         $result['field'] = "*";

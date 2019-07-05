@@ -5,6 +5,7 @@
 // +----------------------------------------------------------------------
 
 return [
+    //用户
     'user'    => [
         'code' => 'User',
         'method' => [
@@ -124,19 +125,11 @@ return [
                 'code' => 'sign',
                 'is_login' => true
             ],
-            'pointlog' => [
-                'code' => 'pointLog',
-                'is_login' => true
-            ],
             'getuserpoint' => [
                 'code' => 'getUserPoint',
                 'is_login' => true
             ],
             'getsetting' => [
-                'code' => 'getSetting',
-                'is_login' => false
-            ],
-            'getsellersetting' => [
                 'code' => 'getSetting',
                 'is_login' => false
             ],
@@ -204,22 +197,54 @@ return [
                 'code' => 'trustCallBack',
                 'is_login' => false
             ],
-            'trustbind' =>[  //账号绑定接口
+            'trustbind' => [  //账号绑定接口
                 'code' => 'trustBind',
                 'is_login' => false
-            ]
+            ],
+            'ispoint' => [
+                'code' => 'isPoint',
+                'is_login' => false
+            ],
+            'myinvite' => [
+                'code' => 'myInvite',
+                'is_login' => true
+            ],
+            'activationinvite' => [
+                'code' => 'activationInvite',
+                'is_login' => true
+            ],
+            'userpointlog' => [
+                'code' => 'userPointLog',
+                'is_login' => true
+            ],
+            'getsigninfo' => [
+                'code' => 'getSignInfo',
+                'is_login' => true
+            ],
+            'getarealist' => [
+                'code' => 'getAreaList',
+                'is_login' => false
+            ],
+            'getposter' => [
+                'code' => 'getPoster',
+                'is_login' => false
+            ],
         ]
     ],
 
     'advert' => [
-        'code' => 'Advert',
+        'code' => 'Carousel',
         'method' => [
             'positionList' => [
-                'code' => 'positionList',
+                'code' => 'carouselSeatList',
                 'is_login' => false
             ],
             'getAdvertList' => [
-                'code' => 'getAdvertList',
+                'code' => 'getList',
+                'is_login' => false
+            ],
+            'getcarousellists' => [
+                'code' => 'getCarouselLists',
                 'is_login' => false
             ]
         ],
@@ -272,6 +297,10 @@ return [
                 'code' => 'userCoupon',
                 'is_login' => true
             ],
+            'getcouponkey' => [
+                'code' => 'getCouponKey',
+                'is_login' => true
+            ]
         ]
     ],
 
@@ -312,6 +341,10 @@ return [
             'setnums' => [
                 'code' => 'setNums',
                 'is_login' => true
+            ],
+            'getnumber' => [
+                'code' => 'getNumber',
+                'is_login' => true
             ]
         ]
     ],
@@ -330,6 +363,10 @@ return [
             ],
             'getallcat' => [
                 'code' => 'getAllCat',
+                'is_login' => false
+            ],
+            'getname' => [
+                'code' => 'getName',
                 'is_login' => false
             ]
         ]
@@ -403,8 +440,16 @@ return [
                 'code' => 'logistics',
                 'is_login' => true
             ],
+            'logisticbyapi' => [
+                'code' => 'logisticsByApi',
+                'is_login' => false
+            ],
             'getcashpooling' => [
                 'code' => 'getCashPooling',
+                'is_login' => false
+            ],
+            'gettaxcode' => [
+                'code' => 'getTaxCode',
                 'is_login' => false
             ]
         ]
@@ -422,6 +467,10 @@ return [
                 'code' => 'getDetial',
                 'is_login' => false
             ],
+            'appgetdetial' => [
+                'code' => 'appGetDetail',
+                'is_login' => false
+            ],
             'getskudetial' => [
                 'code' => 'getSkuDetial',
                 'is_login' => false
@@ -434,9 +483,21 @@ return [
                 'code' => 'getProductInfo',
                 'is_login' => false
             ],
+            'appgetproductinfo' => [
+                'code' => 'appGetProductInfo',
+                'is_login' => false
+            ],
             'getgoodscomment' => [
                 'code' => 'getGoodsComment',
                 'is_login' => false
+            ],
+            'getgoodscathotgoods' => [
+                'code' => 'getGoodsCatHotGoods',
+                'is_login' => false
+            ],
+            'getpickgoods'=>[
+                'code'=>'getPickGoods',
+                'is_login'=>false
             ]
         ]
     ],
@@ -501,6 +562,14 @@ return [
             'ladingdel' => [
                 'code' => 'ladingDel',
                 'is_login' => true
+            ],
+            'getinviteqrcode' => [
+                'code' => 'getInviteQRCode',
+                'is_login' => false
+            ],
+            'getrecommendkeys' => [
+                'code' => 'getRecommendKeys',
+                'is_login' => false
             ]
         ]
     ],
@@ -516,6 +585,56 @@ return [
             'getgoodsdetial'=>[
                 'code'=>'getGoodsDetial',
                 'is_login'=>false
+            ]
+        ]
+    ],
+
+    // h5 微信浏览器里分享
+    'weixinshare' => [
+        'code' => 'WeiXinShare',
+        'method' => [
+            'share' => [
+                'code' => 'share',
+                'is_login' => false
+            ]
+        ]
+    ],
+
+    // 表单
+    'form'=>[
+        'code'=>'Form',
+        'method'=>[
+            'getformdetial'=>[
+                'code'=>'getFormDetial',
+                'is_login' => false
+            ],
+            'addsubmit'=>[
+                'code'=>'addSubmit',
+                'is_login' => false
+            ],
+
+        ],
+    ],
+    'appplus' => [
+        'code' => 'AppPlus',
+        'method' => [
+            'checkversion' => [
+                'code' => 'checkVersion',
+                'is_login' => false
+            ]
+        ]
+    ],
+    'pages' => [//首页布局可视化接口
+        'code'   => 'Pages',
+        'method' => [
+            'getpageconfig' => [
+                'code'     => 'getPageConfig',
+                'is_login' => false
+            ],
+            //获取购买记录，非当前会员，首页滚动提示用的。
+            'getrecod'=>[
+                'code' => 'getRecod',
+                'is_login' => false
             ]
         ]
     ]

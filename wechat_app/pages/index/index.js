@@ -5,7 +5,8 @@ const app = getApp(); //获取全局app.js
 Page({
   //页面使用的数据
   data: {
-    appTitle: '', //小程序标题
+    appTitle: 'Jshop小程序商城——致力于为客户创造有价值的产品。', //小程序标题
+    imageUrl: '/static/images/share.png', //分享封面图
     indicatorDots: true, //商品轮播图底部圆点
     autoplay: true, //商品轮播图自动播放
     interval: 3000, //商品轮播图切换间隔
@@ -22,20 +23,25 @@ Page({
     hotLimit: 8,
     ajaxStatus: true,
     loadingComplete: false,
-    store_type: 2, //独立店铺
+    kefupara: [] //客服信息参数
   },
 
   //页面加载处理
   onLoad: function (e) {
-    if (e.scene) {
-        app.config.site_token = e.scene;
+    //记录被邀请
+    let scene = decodeURIComponent(e.scene);
+    let arr1 = scene.split('&');
+    let invite = '';
+    for (var i = 0; i < arr1.length; i++) {
+        let key = arr1[i].split("=")[0];
+        if (key == 'invite'){
+            invite = arr1[i].split("=")[1];
+        }
     }
-    if (e.invite) {
-        wx.setStorage({
-            key: "beInvited",
-            data: e.invite
-        });
+    if (invite != '') {
+        app.db.set("invitecode", invite);
     }
+
     this.slideImg(); //获取幻灯片广告数据
     this.notice(); //获取公告数据
     this.coupon(); //获取优惠券数据
@@ -44,35 +50,48 @@ Page({
     this.getMyShareCode(); //获取我的推荐码
     this.groupList(); //获取精品团购数据
     this.seckillList(); //获取限时秒杀数据
-
+    this.serviceInfo(); //客服信息
   },
-
+  //客服信息
+  serviceInfo: function () {
+    let userToken = app.db.get('userToken');
+    if (userToken){
+      var that = this;
+      wx.getUserInfo({
+        success(res) {
+          var userInfo = res.userInfo;
+          that.setData({
+            kefupara: JSON.stringify(userInfo)
+          });
+        },
+        fail: function (res) {
+          var userInfo = {};
+          that.setData({
+            kefupara: JSON.stringify(userInfo)
+          });
+        }
+      })
+    }
+  },
   //获取我的推荐码
   getMyShareCode: function () {
     app.api.sharecode(function (e) {
-          let inviteCode = 0;
-          if (e.status) {
-              //获取邀请码成功
-              wx.setStorage({
-                  key: "myInviteCode",
-                  data: e.data
-              });
-          }
+        if (e.status) {
+            //获取邀请码成功
+            app.db.set("myInviteCode", e.data);
+        }
     });
   },
 
   //页面显示
   onShow: function () {
-      let userToken = wx.getStorageSync('userToken');
-      let myInviteCode = wx.getStorageSync('myInviteCode');
+      let userToken = app.db.get('userToken');
+      let myInviteCode = app.db.get('myInviteCode');
       if (userToken && !myInviteCode) {
           app.api.sharecode(function (e) {
               if (e.status) {
                   //获取邀请码成功
-                  wx.setStorage({
-                      key: "myInviteCode",
-                      data: e.data
-                  });
+                  app.db.set("myInviteCode", e.data);
               }
           });
       }
@@ -103,9 +122,9 @@ Page({
     //异步获取公告数据，因为公告要求有实时性，所以不缓存
     app.api.noticeList(function (res) {
       if(res.status){
-        if (res.data.list){
+        if (res.data){
           page.setData({
-            notice: res.data.list
+            notice: res.data
           });
         }
       }
@@ -184,7 +203,7 @@ Page({
     });
   },
 
-  //获取团购数据
+  //获取团购数据 此处不分页
   groupList: function (flag = false) {
     var page = this;
     page.setData({
@@ -201,7 +220,7 @@ Page({
 
     app.api.getGroup(data, function (res) {
       if (res.status) {
-        let group = page.data.group.concat(res.data);
+        let group = res.data;
         page.setData({
           group: group,
           ajaxStatus: true
@@ -210,6 +229,7 @@ Page({
       app.common.groupCountDown(page);
     });
   },
+
   //获取秒杀数据
   seckillList: function (flag = false) {
     var page = this;
@@ -227,7 +247,7 @@ Page({
 
     app.api.getGroup(data, function (res) {
       if (res.status) {
-        let seckill = page.data.seckill.concat(res.data);
+        let seckill = res.data;
         page.setData({
           seckill: seckill,
           ajaxStatus: true
@@ -244,12 +264,13 @@ Page({
     });
   },
 
-  //跳转到商品详情页面
-  goodsDetail: function (e) {
-    wx.navigateTo({
-      url: '../goods/detail/detail?id=' + e.currentTarget.dataset.id
-    });
-  },
+    //跳转到商品详情页面
+    goodsDetail: function (e) {
+        let ins = encodeURIComponent('id=' + e.currentTarget.dataset.id);
+        wx.navigateTo({
+            url: '../goods/detail/detail?scene=' + ins
+        });
+    },
   
   //广告跳转
   slideDetail: function (e) {
@@ -257,12 +278,16 @@ Page({
     var val = e.target.dataset.val;
     if (types == 1) {
       //URL
-
-    } else if (types == 2) {
-      //商品
+      let ins = encodeURIComponent(val);
       wx.navigateTo({
-        url: '../goods/detail/detail?id=' + val,
+        url: '../other/special/special?url=' + ins,
       });
+    } else if (types == 2) {
+        //商品
+        let ins = encodeURIComponent('id=' + val);
+        wx.navigateTo({
+            url: '../goods/detail/detail?scene=' + ins,
+        });
     } else if (types == 3) {
       //文章
         wx.navigateTo({
@@ -272,6 +297,10 @@ Page({
         wx.navigateTo({
             url: '../other/articleList/articleList?id=' + val,
         });
+    } else if (types == 5) {
+      wx.navigateTo({
+        url: '../form/detail/form?id=' + val,
+      });
     }
   },
 
@@ -280,16 +309,12 @@ Page({
 
   //领取优惠券
   getCoupon: function (e) {
-    app.db.userToken(function (token) {
       var data = {
         promotion_id: e.currentTarget.dataset.id
       }
       app.api.getCoupon(data, function (res) {
-        wx.showToast({
-          title: res.msg,
-        });
+        app.common.successToShow(res.msg);
       });
-    });
   },
 
   //前往全部分类
@@ -363,6 +388,7 @@ Page({
 
   //下拉刷新
   onPullDownRefresh: function () {
+    app.common.getJshopConf(); //重新获取配置
     this.slideImg(); //获取幻灯片广告数据
     this.notice(); //获取公告数据
     this.coupon(); //获取优惠券数据
@@ -371,34 +397,39 @@ Page({
     wx.stopPullDownRefresh();
     this.groupList(); //获取精品团购数据
     this.seckillList(); //获取限时秒杀数据
+    app.db.del('all_cat');
   },
   
     //转发分享
     onShareAppMessage: function () {
         let page = this;
-        let userToken = wx.getStorageSync('userToken');
+        let userToken = app.db.get('userToken');
         if (userToken) {
-            let myInviteCode = wx.getStorageSync('myInviteCode');
+            let myInviteCode = app.db.get('myInviteCode');
             if (myInviteCode) {
                 //缓存里面有邀请码
-                let path = '/pages/index/index?scene=' + wx.getStorageSync('site_token') + '&invite=' + myInviteCode;
+                let ins = encodeURIComponent('invite='+myInviteCode);
+                let path = '/pages/index/index?scene='+ins;
                 return {
                     title: page.data.appTitle,
-                    path: path
+                    path: path,
+                    imageUrl: page.data.imageUrl
                 }
             } else {
-                let path = '/pages/index/index?scene=' + wx.getStorageSync('site_token');
+                let path = '/pages/index/index';
                 return {
                     title: page.data.appTitle,
-                    path: path
+                    path: path,
+                    imageUrl: page.data.imageUrl
                 }
             }
         } else {
             //用户没有登录
-            let path = '/pages/index/index?scene=' + wx.getStorageSync('site_token');
+            let path = '/pages/index/index';
             return {
                 title: page.data.appTitle,
-                path: path
+                path: path,
+                imageUrl: page.data.imageUrl
             }
         }
     },

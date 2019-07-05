@@ -6,6 +6,7 @@ use app\common\controller\Manage;
 use app\common\model\Promotion as PromotionModel;
 use app\common\model\PromotionCondition;
 use app\common\model\PromotionResult;
+use app\common\model\UserGrade;
 use Request;
 use app\common\model\GoodsCat;
 
@@ -298,6 +299,16 @@ class Promotion extends Manage
                 return error_code(15004);
             }
             $code = $info['code'];
+            if($code == 'GOODS_CATS'){
+                if(isset($info['params']['cat_id']) && $info['params']['cat_id']){
+
+                    $goodsCatModel = new GoodsCat();
+                    $catids = $goodsCatModel->getCatIdsByLastId($info['params']['cat_id']);
+                    $this->assign('catids', $catids);
+
+                }
+            }
+
             $this->assign($info->toArray());
         }else{
             $code = input('param.condition_code');
@@ -312,6 +323,11 @@ class Promotion extends Manage
                 $catList       = $goodsCatModel->getCatByParentId(0);
                 $this->assign('catList', $catList);
 
+                break;
+            case 'USER_GRADE':
+                $userGradeModel = new UserGrade();
+                $gradeList = $userGradeModel->select();
+                $this->assign('gradeList',$gradeList);
                 break;
         }
 
@@ -453,7 +469,7 @@ class Promotion extends Manage
         if(Request::isAjax()) {
             $promotionModel = new PromotionModel();
             $request = input('param.');
-            $request['type'] = $promotionModel::TYPE_GROUP;
+            $request['type'] = [$promotionModel::TYPE_GROUP,$promotionModel::TYPE_SKILL];
 
             return $promotionModel->tableData($request);
         }
@@ -602,5 +618,56 @@ class Promotion extends Manage
         }else{
             return error_code(10007);
         }
+    }
+
+
+    /**
+     *  更改设置状态
+     *
+     */
+    public function changeState()
+    {
+        $result = [
+            'status' => false,
+            'msg' => '关键参数丢失',
+            'data' => []
+        ];
+        $promotionModel = new \app\common\model\Promotion();
+        $id = input('param.id/d', 0);
+        $elem = input('param.elem/s', '');
+        $state = input('param.state/s', 'true');
+
+        if (!$id && !$elem) return $result;
+        if ($elem === 'status') {
+            $change = $state === 'true'
+                ? $promotionModel::STATUS_OPEN
+                : $promotionModel::STATUS_CLOSE;
+        } else if ($elem === 'exclusive') {
+            $change = $state === 'true'
+                ? $promotionModel::EXCLUSIVE_YES
+                : $promotionModel::EXCLUSIVE_NO;
+        }
+        switch ($elem)
+        {
+            case 'status':
+                $iData['status'] = $change;
+                break;
+            case 'exclusive':
+                $iData['exclusive'] = $change;
+                break;
+            default:
+                $iData = '';
+                break;
+        }
+
+        if ($promotionModel->save($iData, ['id' => $id]))
+        {
+            $result['status'] = true;
+            $result['msg'] = '设置成功';
+        } else {
+            $result['msg'] = '设置失败';
+        }
+
+        return $result;
     }
 }

@@ -25,12 +25,44 @@ class Logistics extends Common
 
     protected function tableWhere($post)
     {
-        $result['where'] = [];
+        $where = [];
+        if(isset($post['name']) && $post['name']){
+            $where[] = ['logi_name','=',$post['name']];
+        }
+        if(isset($post['code']) && $post['code']){
+            $where[] = ['logi_code','=',$post['code']];
+        }
+        $result['where'] = $where;
         $result['field'] = "*";
         $result['order'] = ['sort'=>'asc'];
         return $result;
     }
 
+    public function getInfo($id = 0){
+        return $this->where(['id'=>$id])->find();
+    }
+
+    /**
+     * 保存物流公司
+     * @param array $data
+     * @return array
+     */
+    public function saveData($data = [])
+    {
+        $result = [
+            'status' => false,
+            'data'   => [],
+            'msg'    => '保存失败',
+        ];
+        if ($data['id']) {
+            $res = $this->save($data, ['id' => $data['id']]);
+            if ($res !== false) {
+                $result['status'] = true;
+                $result['msg']    = '保存成功';
+            }
+        }
+        return $result;
+    }
     /**
      * 获取全部物流公司
      * @return array|\PDOStatement|string|\think\Collection
@@ -43,5 +75,21 @@ class Logistics extends Common
         return $this->where([])
             ->order('sort asc')
             ->select();
+    }
+
+
+    public function getNameByCode($code)
+    {
+        if($code)
+        {
+            $where[] = ['logi_code', 'eq', $code];
+            $info = $this->field('logi_name')->where($where)->find();
+        }
+        else
+        {
+            $info['logi_name'] = '';
+        }
+
+        return $info['logi_name']?$info['logi_name']:'';
     }
 }

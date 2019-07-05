@@ -34,6 +34,7 @@ Page({
     commentLoadingComplete: false, //加载全部
     commentNodata: false,
     mode: 'aspectFit',
+    kefupara: '',//客服信息
   },
 
   //商品减一
@@ -120,7 +121,6 @@ Page({
   //页面加载处理
   onLoad: function (options) {
     //判断访问页面时候带的商品ID
-    console.log(options);
     if (options.id && options.groupid) {
       //设置全局商品ID
       this.setData({
@@ -131,11 +131,12 @@ Page({
     //被邀请码
     if (options.invite) {
         wx.setStorage({
-            key: "beInvited",
+            key: "invitecode",
             data: e.invite
         });
     }
     this.getMyShareCode(); //获取我的推荐码
+    this.getUserInfo(); //获取个人信息
   },
 
     //获取我的推荐码
@@ -155,7 +156,7 @@ Page({
     //刷新页面
     onShow: function () {
         let userToken = app.db.get('userToken');
-        let myInviteCode = wx.getStorageSync('myInviteCode');
+        let myInviteCode = app.db.get('myInviteCode');
         if (userToken && !myInviteCode) {
             app.api.sharecode(function (e) {
                 if (e.status) {
@@ -214,7 +215,6 @@ Page({
           if (res.data.isfav == 'false') {
             isfav = false;
           }
-          console.log(res.data);
           var spes_desc = page.getSpes(res.data.product);
           page.setData({
             goodsImg: res.data.album,
@@ -308,18 +308,20 @@ Page({
   //商品分享功能
   onShareAppMessage: function () {
     let page = this;
-    let userToken = wx.getStorageSync('userToken');
+    let userToken = app.db.get('userToken');
     if (userToken) {
-        let myInviteCode = wx.getStorageSync('myInviteCode');
+        let myInviteCode = app.db.get('myInviteCode');
         if (myInviteCode) {
-            let path = '/pages/goods/detail/detail?scene=' + wx.getStorageSync('site_token') + '&id=' + page.data.goodsInfo.id + '&invite=' + myInviteCode;
+            let ins = encodeURIComponent('id=' + page.data.goodsInfo.id + '&invite=' + myInviteCode);
+            let path = '/pages/goods/detail/detail?scene=' + ins;
             return {
                 title: page.data.goodsInfo.name,
                 imageUrl: page.data.goodsImg[0],
                 path: path
             }
         } else {
-            let path = '/pages/goods/detail/detail?scene=' + wx.getStorageSync('site_token') + '&id=' + page.data.goodsInfo.id;
+            let ins = encodeURIComponent('id=' + page.data.goodsInfo.id);
+            let path = '/pages/goods/detail/detail?scene=' + ins;
             return {
                 title: page.data.goodsInfo.name,
                 imageUrl: page.data.goodsImg[0],
@@ -327,7 +329,8 @@ Page({
             }
         }
     } else {
-        let path = '/pages/goods/detail/detail?scene=' + wx.getStorageSync('site_token') + '&id=' + page.data.goodsInfo.id;
+        let ins = encodeURIComponent('id=' + page.data.goodsInfo.id);
+        let path = '/pages/goods/detail/detail?scene=' + ins;
         return {
             title: page.data.goodsInfo.name,
             imageUrl: page.data.goodsImg[0],
@@ -342,15 +345,14 @@ Page({
       goods_id: this.data.goodsId
     }
     var page = this;
-    // app.api.goodsHistory(data, function (res) {
-    //   //浏览记录添加成功
-    // });
+    app.api.goodsHistory(data, function (res) {
+      //浏览记录添加成功
+    });
   },
 
   //收藏和取消收藏商品
   goodsCollection: function () {
     var page = this;
-    app.db.userToken(function (token) {
       var data = {
         goods_id: page.data.goodsId
       }
@@ -362,11 +364,8 @@ Page({
         page.setData({
           isfav: isfav
         });
-        wx.showToast({
-          title: res.msg
-        });
+        app.common.successToShow(res.msg);
       });
-    });
   },
 
   //前往购物车
@@ -379,18 +378,14 @@ Page({
   //加入购物车
   goodsAddCart: function () {
     var page = this;
-    app.db.userToken(function (token) {
       //page.getNowProduct(); //获取当前选中的货品信息
       var data = {
         product_id: page.data.productId,
         nums: page.data.nums
       }
       app.api.goodsAddCart(data, function (res) {
-        wx.showToast({
-          title: res.msg
-        });
+        app.common.successToShow(res.msg);
       });
-    });
   },
 
   //获取当前选中的货品
@@ -412,9 +407,7 @@ Page({
   //       });
   //       return this.data.goodsAllProducts[now];
   //     } else {
-  //       wx.showToast({
-  //         title: '该货品不存在，请重新选择规格'
-  //       });
+  //       app.common.errorToBack('该货品不存在，请重新选择规格', 0);
   //       return false;
   //     }
   //   } else {
@@ -426,7 +419,6 @@ Page({
   //立即购买
   buyNow: function () {
     var page = this;
-    app.db.userToken(function (token) {
       //page.getNowProduct(); //获取当前选中的货品信息
       var data = {
         product_id: page.data.productId,
@@ -438,12 +430,10 @@ Page({
           url: '../../cart/firmOrder/firmOrder?data=' + JSON.stringify(res.data),
         });
       });
-    });
   },
   
   //规格选择
   selectSku: function (obj) {
-    console.log(obj);
     var id = obj.target.dataset.key;
     if(id == "" || id == "0"){
       app.common.errorToBack("出错了",0);
@@ -502,7 +492,25 @@ Page({
     }
     return product.default_spes_desc;
   },
-  
+  //获取用户信息
+  getUserInfo: function () {
+    let page = this;
+    let userToken = app.db.get('userToken');
+    if (userToken) {
+      app.api.userInfo(function (res) {
+        let kefupara = {};
+        kefupara.nickName = res.data.nickname;
+        kefupara.tel = res.data.mobile;
+
+        page.setData({
+          nickname: res.data.nickname,
+          avatar: res.data.avatar,
+          kefupara: JSON.stringify(kefupara) //传递客服信息
+        });
+      });
+    }
+  },
+
   //客服功能
   customerService: function (e) {}
 });

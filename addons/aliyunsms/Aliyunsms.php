@@ -6,7 +6,7 @@
 // +----------------------------------------------------------------------
 // | Author: mark <jima@jihainet.com>
 // +----------------------------------------------------------------------
-namespace addons\aliyunsms;    // 注意命名空间规范
+namespace addons\Aliyunsms;    // 注意命名空间规范
 
 use myxland\addons\Addons;
 use app\common\model\Addons as addonsModel;
@@ -19,7 +19,7 @@ class Aliyunsms extends Addons
 {
     // 该插件的基础信息
     public $info = [
-        'name'        => 'aliyunsms',    // 插件标识
+        'name'        => 'Aliyunsms',    // 插件标识
         'title'       => '阿里云短信通道',    // 插件名称
         'description' => '阿里云发送短信插件，请勿和其它短信通道一起使用',    // 插件简介
         'status'      => 0,    // 状态
@@ -51,6 +51,11 @@ class Aliyunsms extends Addons
      */
     public function sendsms($data)
     {
+        $result     = [
+            'status' => false,
+            'data'   => [],
+            'msg'    => '发送失败'
+        ];
         $addonModel = new addonsModel();
         $setting    = $addonModel->getSetting($this->info['name']);
         $params     = array();
@@ -62,6 +67,14 @@ class Aliyunsms extends Addons
         $accessKeyId     = $setting['accessKeyId'];
         $accessKeySecret = $setting['accessKeySecret'];
 
+        if ($data['params']['code'] == 'seller_order_notice') {
+            $data['params']['mobile'] = getSetting('shop_mobile');
+            if (!$data['params']['mobile']) {
+                $result['msg'] = '商户手机号不存在';
+                return $result;
+            }
+        }
+
         // fixme 必填: 短信接收号码
         $params["PhoneNumbers"] = $data['params']['mobile'];
 
@@ -69,6 +82,10 @@ class Aliyunsms extends Addons
         $params["SignName"] = $setting['aliyunPrefix'];
 
         // fixme 必填: 短信模板Code，应严格按"模板CODE"填写, 请参考: https://dysms.console.aliyun.com/dysms.htm#/develop/template
+        if (!isset($setting[$data['params']['code']]['data']['title']['value'])) {
+            $result['msg'] = '请先配置后台短信接口';
+            return $result;
+        }
         $params["TemplateCode"] = $setting[$data['params']['code']]['data']['title']['value'];
 
         // fixme 可选: 设置模板参数, 假如模板中存在变量需要替换则为必填项
@@ -78,7 +95,7 @@ class Aliyunsms extends Addons
         if (!empty($params["TemplateParam"]) && is_array($params["TemplateParam"])) {
             $params["TemplateParam"] = json_encode($params["TemplateParam"], JSON_UNESCAPED_UNICODE);
         }
-        Log::info('aliyunsms:'.json_encode($params));
+        Log::info('aliyunsms:' . json_encode($params));
         try {
             $content = $this->request(
                 $accessKeyId,
@@ -93,11 +110,18 @@ class Aliyunsms extends Addons
             );
             if ($content->Code != 'OK') {
                 Log::error($content->Message);
+                $result['msg'] = $content->Message;
+                return $result;
+
             }
         } catch (\Exception $e) {
             Log::error($e->getMessage());
+            $result['msg'] = $e->getMessage();
+            return $result;
         }
-        return true;
+        $result['status'] = true;
+        $result['msg']    = '发送成功';
+        return $result;
     }
 
     /**

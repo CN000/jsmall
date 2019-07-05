@@ -3,8 +3,10 @@ namespace app\Manage\controller;
 
 use app\common\controller\Manage;
 use app\common\model\BillAftersales;
+use app\common\model\Notice;
 use app\common\model\Operation;
 use app\common\model\Order;
+use app\common\model\Promotion;
 use think\facade\Cache;
 use app\common\model\WeixinAuthor;
 use app\common\model\Goods;
@@ -13,7 +15,15 @@ use app\common\model\Brand;
 
 class Index extends Manage
 {
-    public function index()
+
+    public function index(){
+        $operationModel = new Operation();
+        $this->assign('menu', $operationModel->manageMenu(session('manage')['id']));
+
+        return $this->fetch('index');
+    }
+
+    public function welcome()
     {
         $orderModel = new Order();
         //未发货数量
@@ -31,22 +41,8 @@ class Index extends Manage
         $goodsModel = new Goods();
         $goodsStatics=$goodsModel->staticGoods();
         $this->assign('goods_statics',$goodsStatics);
-
-        //是否关闭弹窗
-        $closeauthor = Cache::get("closeauthor",'false');
-        $this->assign('closeauthor',$closeauthor);
-        //获取是否授权
-        $weixinAuthorModel = new WeixinAuthor();
-        $authorInfo = $weixinAuthorModel->getAuthorInfo('b2c','bind_type,id,head_img');
-        if($authorInfo){
-            $this->assign('is_author','true');
-        }else{
-            $this->assign('is_author','false');
-        }
-
         hook('adminindex', $this);//后台首页钩子
-
-        return $this->fetch();
+        return $this->fetch('welcome');
     }
 
     /**
@@ -62,7 +58,6 @@ class Index extends Manage
         }else{
             return $this->fetch('tagSelectBrands');
         }
-
     }
     /**
      * 供tag标签选择商品的时候使用
@@ -79,7 +74,47 @@ class Index extends Manage
         }else{
             return $this->fetch('tagSelectGoods');
         }
-
     }
+
+    /**
+     * 清除整站全部缓存
+     * 如果其它地方写了缓存的读写方法，一定要有判断是否有缓存的情况！！！
+     */
+    public function clearCache(){
+        Cache::clear();
+        $this->success('清除缓存成功','index/welcome');
+    }
+
+    /**
+     * 供tag标签选择公告的时候用
+     */
+    public function tagSelectNotice()
+    {
+        $this->view->engine->layout(false);
+        if(input('param.type') != 'show'){
+            $request = input('param.');
+            $noticeModel = new Notice();
+            return $noticeModel->tableData($request);
+        }else{
+            return $this->fetch('tagSelectNotice');
+        }
+    }
+
+    /**
+     * 供tag标签选择团购秒杀的时候使用
+     */
+    public function tagSelectGroup()
+    {
+        $this->view->engine->layout(false);
+        if(input('param.type') != 'show'){
+            $request = input('param.');
+            $promotionModel = new Promotion();
+            $request['type'] = [$promotionModel::TYPE_GROUP,$promotionModel::TYPE_SKILL];
+            return $promotionModel->tableData($request);
+        }else{
+            return $this->fetch('tagSelectGroup');
+        }
+    }
+
 
 }

@@ -7,24 +7,48 @@ class Setting extends Common
 {
     public $skeys = [
         'shop_name' => [
-            'name' => '店铺名称',
-            'value' => '我的店铺'
+            'name' => '平台名称',
+            'value' => '我的平台'
+        ],
+        'shop_desc' => [
+            'name' => '平台描述',
+            'value' => '平台描述会展示在前台及微信分享店铺描述'
         ],
         'shop_address' => [
-            'name' => '店铺地址',
-            'value' => '我的店铺地址'
+            'name' => '平台地址',
+            'value' => '我的平台地址'
+        ],
+        'shop_beian' => [
+            'name' => '备案信息',
+            'value' => '网站备案信息'
         ],
         'shop_logo' => [
-            'name' => '店铺logo',
+            'name' => '平台logo',
+            'value' => '',
+        ],
+        'shop_favicon' => [
+            'name' => 'Favicon图标',
+            'value' => '',
+        ],
+        'shop_default_image' => [
+            'name' => '默认图',
             'value' => '',
         ],
         'shop_mobile' => [
-            'name' => '店铺联系方式',
+            'name' => '联系手机号',
             'value' => ''
         ],
         'store_switch' => [
             'name' => '开启门店自提',
             'value' => '2'
+        ],
+        'cate_style' => [
+            'name' => '分类样式',
+            'value' => 3
+        ],
+        'cate_type' => [
+            'name' => 'H5分类样式',
+            'value' => 1
         ],
         'order_cancel_time' => [
             'name' => '订单取消时间',
@@ -42,14 +66,18 @@ class Setting extends Common
             'name' => '订单自动评价时间',
             'value' => '30'
         ],
+        'remind_order_time'=>[
+            'name' => '订单提醒付款时间',
+            'value' => '1'
+        ],
         'goods_stocks_warn' =>  [
             'name' => '库存警报数量',
             'value' => '10'
         ],
-        'is_author'           =>  [         //此字段不显示到前台，在控制器中直接进行操作的，对商户不可见
-            'name' => '是否授权',
-            'value' => ''
-        ],
+//        'is_author'           =>  [         //此字段不显示到前台，在控制器中直接进行操作的，对商户不可见
+//            'name' => '是否授权',
+//            'value' => ''
+//        ],
         'reship_name' => [
             'name' => '退货联系人',
             'value' => ''
@@ -131,17 +159,18 @@ class Setting extends Common
             'name'=>'小程序名称',
             'value' => 'JSHOP',
         ],
-        'wx_appid'=>[
+        //小程序设置
+        'wx_appid'=>[           //小程序id
             'name'=>'AppId',
-            'value' => '000000',
+            'value' => '',
         ],
         'wx_app_secret'=>[
             'name'=>'AppSecret',
-            'value' => '000000',
+            'value' => '',
         ],
         'wx_user_name'=>[
             'name'=>'原始Id',
-            'value' => '000000',
+            'value' => '',
         ],
         'wx_principal_name'=>[
             'name'=>'主体信息',
@@ -151,27 +180,27 @@ class Setting extends Common
             'name'=>'简介',
             'value' => 'Jshop小程序是一款标准B2C商城小程序',
         ],
-        //小程序logo
-        'wx_head_img'=>[
-            'name'=>'Logo',
-            'value'=>''
-        ],
-        'sms_user_id' => [
-            'name' => '短信通道用户ID',
-            'value' => ''
-        ],
-        'sms_account' => [
-            'name' => '短信通道用户名',
-            'value' => ''
-        ],
-        'sms_password' => [
-            'name' => '短信通道用户密码',
-            'value' => ''
-        ],
-        'sms_prefix' => [
-            'name' => '短信前缀',
-            'value' => 'Jshop'
-        ],
+        //小程序logo,暂时注释掉了。
+//        'wx_head_img'=>[
+//            'name'=>'Logo',
+//            'value'=>''
+//        ],
+//        'sms_user_id' => [
+//            'name' => '短信通道用户ID',
+//            'value' => ''
+//        ],
+//        'sms_account' => [
+//            'name' => '短信通道用户名',
+//            'value' => ''
+//        ],
+//        'sms_password' => [
+//            'name' => '短信通道用户密码',
+//            'value' => ''
+//        ],
+//        'sms_prefix' => [
+//            'name' => '短信前缀',
+//            'value' => 'Jshop'
+//        ],
         //公众号设置
         'wx_official_name'=>[
             'name'=>'公众号名称',
@@ -197,10 +226,6 @@ class Setting extends Common
             'name'=>'微信验证TOKEN',
             'value' => '',
         ],
-        'wx_official_encode'=>[
-            'name'=>'消息加解密方式',
-            'value'=>'plaintext'
-        ],
         'wx_official_encodeaeskey'=>[
             'name'=>'EncodingAESKey',
             'value'=>''
@@ -209,19 +234,73 @@ class Setting extends Common
             'name'=>'公众号类型',
             'value'=>'service'
         ],
+        // 提现设置
+        'tocash_money_low'=>[
+            'name'=>'最低提现金额',
+            'value'=>'0'
+        ],
+        'tocash_money_rate' => [
+            'name' => '提现服务费率',
+            'value' => '0'
+        ],
+        //其他设置
+        'qq_map_key'=>[
+            'name'=>'腾讯地图key',
+            'value'=>''
+        ],
+        'kuaidi100_customer'=>[
+            'name'=>'公司编号',
+            'value'=>''
+        ],
+        'kuaidi100_key'=>[
+            'name'=>'授权key',
+            'value'=>''
+        ],
+        'image_storage_type'=>[
+            'name'=>'图片存储引擎',
+            'value'=>'Local'
+        ],
+        'image_storage_params'=>[
+            'name'=>'图片存储配置参数',
+            'value'=>''
+        ],
+        //搜索发现关键字
+        'recommend_keys' => [
+            'name' => '搜索发现关键词',
+            'value' => '羽绒服 iphone 小米mix'
+        ],
+        //统计代码
+        'statistics_code' => [
+            'name' => '百度统计代码',
+            'value' => ''
+        ],
+        //发票开关
+        'invoice_switch' => [
+            'name' => '发票功能',
+            'value' => 1
+        ],
+        //APP设置
+        'wx_app_appid' => [             //微信支付在app上的appid
+            'name' => '微信APP支付appid',
+            'value' => ''
+        ],
     ];
 
 
     //设置参数
     public function setValue($skey, $value)
     {
+
         $result = $this->check($skey, $value);
         if(!$result['status']){
             return $result;
         }
-
+        if(is_array($value)){
+            $value = json_encode($value);
+        }
         $info = $this->where(array('skey'=>$skey))->find();
         if($info){
+
             $info->value = $value;
             $info->save();
         }else{
@@ -242,6 +321,9 @@ class Setting extends Common
     {
         $info = $this->where(array('skey' => $skey))->find();
         if($info){
+            if(isjson( $info['value'])){
+                $info['value'] = json_decode($info['value'],true);
+            }
             return $info['value'];
         }else{
             if(isset($this->skeys[$skey]['value'])){
@@ -268,18 +350,14 @@ class Setting extends Common
 
         if($skey == 'shop_name'){
             if($value == ''){
-                $result['msg'] = "店铺名称不能为空";
+                $result['msg'] = "平台名称不能为空";
                 return $result;
             }
         }
 
         if($skey == 'shop_mobile'){
             if($value != ''){
-                $isMob="/^1[34578]{1}\d{9}$/";
-
-                $isTel="/^([0-9]{3,4}-)?[0-9]{7,8}$/";
-
-                if(!preg_match($isMob,$value) && !preg_match($isTel,$value))
+                if(!isMobile($value))
                 {
                     $result['msg'] = '联系方式号码格式错误';
                     return $result;
@@ -299,6 +377,9 @@ class Setting extends Common
         foreach($this->skeys as $k => $v){
             foreach($list as $info){
                 if($info['skey'] == $k){
+                    if(isjson( $info['value'])){
+                        $info['value'] = json_decode($info['value'],true);
+                    }
                     $this->skeys[$k]['value'] = $info['value'];
                     break;
                 }

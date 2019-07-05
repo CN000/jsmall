@@ -49,7 +49,7 @@ class  ArticleType extends Manage
             return $articleTypeModel->addData(input('param.'));
         }
         $list = $articleTypeModel->select();
-        return $this->fetch('',['list' => $list]);
+        return $this->fetch('',['list' => $articleTypeModel->getTree($list)]);
     }
 
 
@@ -67,7 +67,7 @@ class  ArticleType extends Manage
         $this->view->engine->layout(false);
         $typeInfo = $articleTypeModel->where('id',input('param.id/d'))->find();
         if (!$typeInfo) return error_code(10002);
-        return $this->fetch('',['typeInfo'=>$typeInfo]);
+        return $this->fetch('addson',['typeInfo'=>$typeInfo]);
     }
 
 

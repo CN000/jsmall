@@ -1,5 +1,5 @@
 <?php
-namespace addons\mms1086;	// 注意命名空间规范
+namespace addons\Mms1086;	// 注意命名空间规范
 
 use myxland\addons\Addons;
 use app\common\model\Addons as addonsModel;
@@ -11,7 +11,7 @@ class Mms1086 extends Addons
 {
     // 该插件的基础信息
     public $info = [
-        'name' => 'mms1086',	// 插件标识
+        'name' => 'Mms1086',	// 插件标识
         'title' => 'mms1086短信插件',	// 插件名称
         'description' => 'mms1086发送短信插件，请勿和其它短信通道一起使用',	// 插件简介
         'status' => 0,	// 状态
@@ -43,22 +43,39 @@ class Mms1086 extends Addons
      */
     public function sendsms($params)
     {
+        $result     = [
+            'status' => false,
+            'data'   => [],
+            'msg'    => '发送失败'
+        ];
         $addonModel = new addonsModel();
         $setting    = $addonModel->getSetting($this->info['name']);
-
-        $sms_password = config('?jshop.sms_password') ? config('jshop.sms_password') : $setting['sms_password'];     //为了演示效果，此密码从配置文件中取，如果正式使用，请删除此行，并在后台店铺设置里配置密码即可。
+        if ($params['params']['code'] == 'seller_order_notice') {
+            $params['params']['mobile'] = getSetting('shop_mobile');
+            if (!$params['params']['mobile']) {
+                $result['msg'] = '商户手机号不存在';
+                return $result;
+            }
+        }
+        $sms_password = $setting['sms_password'];     //为了演示效果，此密码从配置文件中取，如果正式使用，请删除此行，并在后台店铺设置里配置密码即可。
         $content      = $params['params']['content'] . '【' . $setting['sms_prefix'] . '】';
         //$content = iconv("utf-8","gb2312",$content);
         $content = urlencode($content);      //内容
         $str     = "http://sms.mms1086.com:8868/sms.aspx?action=send&userid=" . $setting['sms_user_id'] . "&account=" . $setting['sms_account'] . "&password=" . $sms_password . "&mobile=" . $params['params']['mobile'] . "&content=" . $content . "&sendTime=&extno=";
         $re      = file_get_contents($str);
-        return true;
+        $data    = xmlToArray($re);
+        if (isset($data['returnstatus']) && $data['returnstatus'] == 'Faild') {
+            $result['msg'] = $data['message'];
+            return $result;
+        }
+        $result['msg']    = '发送成功';
+        $result['status'] = true;
+        return $result;
     }
 
     public function config($params = [])
     {
-        $config = $this->getConfig();
-        $this->assign('config', $config);
+        $this->assign('config', $params);
         return $this->fetch('config');
     }
 

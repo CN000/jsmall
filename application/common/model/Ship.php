@@ -111,7 +111,7 @@ class Ship extends Common
         }
         $data['logi_name'] = $logistics['logi_name'];
 
-        if ($this->save($data, ['id' => $id])) {
+        if ($this->save($data, ['id' => $id]) !== false) {
             $result['status'] = true;
             $result['msg']    = '保存成功';
         }
@@ -167,7 +167,6 @@ class Ship extends Common
         }
         if ($def['type'] == self::TYPE_PART) {
             $area_fee = json_decode($def['area_fee'], true);
-
             if ($area_fee) {
                 $isIn = false;
                 foreach ($area_fee as $key => $val) {
@@ -181,7 +180,7 @@ class Ship extends Common
                     }
                 }
                 if (!$isIn) {
-                    $total   = self::calculate_fee($val, $weight, $totalmoney);
+                    $total   = self::calculate_fee($def, $weight, $totalmoney);
                     $postfee = getMoney($total);
                 }
             } else {
@@ -202,9 +201,9 @@ class Ship extends Common
      * todo 地区判断以后再加
      * @param int $area_id
      * @return array|bool|null|\PDOStatement|string|\think\Model
-     * User: wjima
-     * Email:1457529125@qq.com
-     * Date: 2018-02-01 15:36
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
     public function getShip($area_id = 0)
     {
@@ -236,20 +235,20 @@ class Ship extends Common
      */
     static function calculate_fee($ship, $weight, $totalmoney = 0)
     {
-
+		//满多少免运费
+		if (isset($ship['goodsmoney']) && $ship['goodsmoney'] > 0 && $totalmoney > $ship['goodsmoney']) {
+			return 0;
+		}
         if ($weight > $ship['firstunit']) {
-            //满多少免运费
-            if (isset($ship['goodsmoney']) && $ship['goodsmoney'] > 0 && $totalmoney > $ship['goodsmoney']) {
-                return 0;
-            }
+           
             $shipmoney = 0;
-            $tmp_exp = trim(str_replace('w', $weight, $ship['exp']));
+            $tmp_exp   = trim(str_replace('w', $weight, $ship['exp']));
             eval("\$shipmoney = $tmp_exp;");
             return $shipmoney;
         } else {
-            if(isset($ship['firstunit_price'])){
+            if (isset($ship['firstunit_price'])) {
                 return $ship['firstunit_price'];
-            }else{
+            } else {
                 return $ship['firstunit_area_price'];
             }
         }
@@ -268,17 +267,18 @@ class Ship extends Common
             $data = $data->toArray();
             if ($data['type'] == self::TYPE_PART) {
                 $data['area_fee'] = json_decode($data['area_fee'], true);
-                foreach ($data['area_fee'] as $key => &$val) {
+
+                foreach ((array)$data['area_fee'] as $key => &$val) {
                     if ($val['area_value']) {
                         $area_value = json_decode($val['area_value'], true);
                         $area_html  = '';
                         foreach ($area_value as $akey => $aval) {
-                            if ($aval['pid'] == '0') {
+                            if ($aval['pid'] <= 0) {
                                 $area_html .= $aval['name'] . ',';
                             }
                         }
-                        $area_html        = substr($area_html, 0, -1);
-                        $val['area_html'] = $area_html;
+                        $area_html                           = substr($area_html, 0, -1);
+                        $data['area_fee'][$key]['area_html'] = $area_html;
                     }
                 }
             }
@@ -334,7 +334,7 @@ class Ship extends Common
      */
     protected function tableWhere($post)
     {
-        $where = [];
+        $where           = [];
         $result['where'] = $where;
         $result['field'] = "*";
         $result['order'] = ['id' => 'desc'];

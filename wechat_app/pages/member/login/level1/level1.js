@@ -1,7 +1,7 @@
 var app = getApp(); //全局APP
 Page({
   data: {
-    logo:'../../../image/default_avatar.png',
+    logo:app.config.shop_logo,
     open_id:""
   },
   //页面加载处理
@@ -11,34 +11,20 @@ Page({
       var data = {
         code: code
       };
-        console.log(data);
       app.api.login1(data, function (res) {
-          console.log(res);
         if(!res.status){
-          wx.showToast({
-            title: res.msg,
-            icon: 'success',
-            duration: 2000,
-            success: function (res) {
-              wx.navigateBack({
-                delta: 1
-              })
-            }
-          })
+            app.common.successToShow(res.msg, function () {
+                wx.navigateBack({
+                    delta: 1
+                });
+            });
         }else{
           page.setData({
-            open_id: res.data
+            open_id: res.data,
+            logo: app.config.shop_logo
           });
         }
       });
-    });
-    //取店铺的配置信息，拿到店铺logo
-    app.api.getSellerSetting('shop_logo',function(res){
-      if(res.status){
-        page.setData({
-          logo:res.data
-        });
-      }
     });
   },
   //微信授权用户取得信息
@@ -74,34 +60,21 @@ Page({
           return res.code;
         } else {
           //wx.login成功，但是没有取到code
-          wx.showToast({
-            title: '未取得code',
-            icon: 'warn',
-            duration: 2000
-          })
+          app.common.errorToBack('未取得code', 0);
         }
       },
       fail: function (res) {
         //wx.login的fail
-        wx.showToast({
-          title: '用户授权失败wx.login',
-          icon: 'warn',
-          duration: 2000
-        })
+        app.common.errorToBack('用户授权失败wx.login', 0);
       }
     });
   },
   //提交按钮
   // mobileLogin: function () {
-    
-  //   console.log(this.data);
   // },
-  getPhoneNumber: function (e) {
+  getUserInfo: function (e) {
     var page = this;
-    // console.log(e.detail.errMsg)
-    // console.log(e.detail.iv)
-    // console.log(e.detail.encryptedData)
-    if (e.detail.errMsg == 'getPhoneNumber:fail user deny') {
+    if (e.detail.errMsg == 'getUserInfo:fail auth deny') {
       wx.showModal({
         title: '提示',
         showCancel: false,
@@ -112,9 +85,9 @@ Page({
       var data = {
         open_id: page.data.open_id,
         iv: e.detail.iv,
-        edata: e.detail.encryptedData
+        edata: e.detail.encryptedData,
+        signature: e.detail.signature
       };
-      //console.log(data);
       page.toLogin(data);
       //注意，这里不检查登陆态了，默认一直有效，这是个隐含的问题,因为wx.checkSession永远都是fail，不知道为啥，以后再来处理吧。
       // wx.checkSession({
@@ -124,13 +97,11 @@ Page({
       //       iv: e.detail.iv,
       //       edata: e.detail.encryptedData
       //     };
-      //     console.log(data);
       //     page.toLogin(data);
       //   },
       //   fail: function () {
       //     // session_key 已经失效，需要重新执行登录流程
       //     //wx.login() //重新登录
-      //     console.log('需要重新登录');
       //   }
       // })
     }
@@ -139,11 +110,18 @@ Page({
   toLogin: function (data) {
     app.api.login2(data, function (res) {
       if(res.status){
-        //登陆成功，设置token，并返回上一页
-        app.db.set('userToken', res.data);
-        wx.navigateBack({
-          delta: 1
-        })
+        //判断是否返回了token，如果没有，就说明没有绑定账号，跳转到绑定页面
+        if (typeof res.data.token == 'undefined'){
+          wx.redirectTo({
+            url: '../level2/level2?user_wx_id=' + res.data.user_wx_id
+          })
+        }else{
+          //登陆成功，设置token，并返回上一页
+          app.db.set('userToken', res.data.token);
+          wx.navigateBack({
+            delta: 1
+          })
+        }
       }else{
         wx.showModal({
           title: '提示',
@@ -154,11 +132,6 @@ Page({
       }
     });
   },
-  //跳转到手机号码登陆页面
-  showMobileLogin: function (e) {
-    wx.redirectTo({
-      url: '../level2/level2'
-    })
-  },
+
 
 });

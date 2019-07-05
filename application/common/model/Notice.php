@@ -90,17 +90,16 @@ class Notice extends Common
      */
     public function saveData($data = [])
     {
-        $result = ['status' => true, 'msg' => '保存成功' , 'data' => ''];
+        $result = ['status' => true, 'msg' => '保存成功', 'data' => ''];
 
-        $validate = new Validate($this->rule,$this->msg);
-        if(!$validate->check($data))
-        {
+        $validate = new Validate($this->rule, $this->msg);
+        if (!$validate->check($data)) {
             $result['status'] = false;
-            $result['msg'] = $validate->getError();
+            $result['msg']    = $validate->getError();
         } else {
-            if (!$this->allowField(true)->save($data,['id'=>$data['id']])) {
+            if ($this->allowField(true)->save($data, ['id' => $data['id']]) === false) {
                 $result['status'] = false;
-                $result['msg'] = '保存失败';
+                $result['msg']    = '保存失败';
             }
         }
         return $result;
@@ -150,7 +149,6 @@ class Notice extends Common
 
     /**
      * @param $type
-     * @param $seller_id
      * @param $order
      * @param $orderType
      * @param $page
@@ -160,9 +158,9 @@ class Notice extends Common
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function getNoticeList($type,$order,$orderType,$page,$pageSize)
+    public function getNoticeList($type = 1, $order = 'id', $orderType = 'desc', $page = 1, $pageSize = 10)
     {
-        return $this->field('id,title,ctime')->where('type',$type)->order($order,$orderType)->page($page,$pageSize)->select();
+        return $this->field('id,title,ctime')->where('type', $type)->order($order, $orderType)->page($page, $pageSize)->select();
     }
 
 

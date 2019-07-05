@@ -1,2 +1,2 @@
-window.apiUrl = '/index.php/api.html';
+window.host = 'http://www.game.com';
 window.entId = '';

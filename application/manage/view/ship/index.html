@@ -18,7 +18,7 @@
         //执行渲染
         table.render({
             elem: '#shipTable', //指定原始表格元素选择器（推荐id选择器）
-            height: 'full-320',
+            height: 'full-220',
             cellMinWidth: '80',
             page: 'true',
             limit:'20',
@@ -34,7 +34,7 @@
                 {field: 'is_def',title: '是否默认',align:'center'},
                 {field: 'status',title: '状态',align:'center'},
                 {field: 'sort',title: '排序',align:'center'},
-                {fixed: 'right', width:150, title:'操作',align:'center', toolbar:'#shipBar'}
+                {width:150, title:'操作',align:'center', toolbar:'#shipBar'}
             ]]
         });
         date.render({

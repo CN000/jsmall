@@ -85,7 +85,7 @@ class Common extends Base
 
     }
     /**
-     * 用户注册页面
+     * 用户注册页面，此页面是通过页面直接登陆注册的，没有走接口，存的是session，暂时没啥用
      * @author sin
      */
     public function reg()
@@ -95,7 +95,7 @@ class Common extends Base
         }
         if(Request::isPost()){
             $userModel = new User();
-            $result = $userModel->toAdd(input('post.'));
+            $result = $userModel->smsLogin(input('post.'));
             if($result['status']){
                 if(Request::isAjax()){
                     $result['data'] = url('seller/index/index');
@@ -139,7 +139,7 @@ class Common extends Base
     }
 
     /**
-     * 发送短信验证码
+     * 发送短信验证码，这里只能发送登陆，注册和短信校验的时候的验证码
      */
     public function sms()
     {
@@ -160,27 +160,6 @@ class Common extends Base
         $params = input('param.params',[]);
 
         $code = input('post.code');
-        if($code == 'reg' || $code == 'login' || $code == 'seller_reg'){
-            //此三个短信编码需要做特殊校验，所以先去use里做判断
-            return $userModel->sms(input('post.mobile'),$code);
-        }else{
-            $smsModel = new Sms();
-            return $smsModel->send(input('post.mobile'), $code,$params);
-        }
-    }
-    public function topay()
-    {
-        $config = [
-            'appid' => '',
-            'rsa_private_key' => "",
-        ];
-        $alipay = new \org\payments\alipay($config);
-        $paymentInfo = [
-            'payment_id' => time(),
-            'money' => '0.01',
-        ];
-        $re = $alipay->pay($paymentInfo);
-        dump($re);
-
+        return $userModel->sms(input('post.mobile'),$code);
     }
 }

@@ -29,9 +29,15 @@
     </div>
     <div class="layui-form-item">
         <label class="layui-form-label">分类图标：</label>
+
         <div class="layui-input-block">
             {Jshop:image id='image_id' name="image_id" value=""/}
+
+            <div class="layui-form-mid layui-word-aux list-tag">
+                图标尺寸建议：60px*60px
+            </div>
         </div>
+
     </div>
     <div class="layui-form-item">
         <label class="layui-form-label">排序：</label>
@@ -39,6 +45,7 @@
             <input type="number" name="sort" id="sort" required lay-verify="required" placeholder="排序" autocomplete="off" class="layui-input" value="100">
         </div>
     </div>
+    {:jshopToken()}
     <button class="layui-btn layui-btn-fluid add-save-btn">保存</button>
 </div>
 

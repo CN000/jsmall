@@ -90,7 +90,8 @@ class Categories extends Manage
                 $return_data = array(
                     'status' => true,
                     'msg' => '添加成功',
-                    'data' => $result
+                    'data' => $result,
+                    'token'  => \think\facade\Request::token('__Jshop_Token__', 'sha1')
                 );
             }
             else
@@ -98,7 +99,8 @@ class Categories extends Manage
                 $return_data = array(
                     'status' => false,
                     'msg' => '添加失败',
-                    'data' => $result
+                    'data' => $result,
+                    'token'  => \think\facade\Request::token('__Jshop_Token__', 'sha1')
                 );
             }
             return $return_data;
@@ -209,6 +211,25 @@ class Categories extends Manage
         $catList     = $goodsCatModel->field('id,name,sort')->where([['parent_id','=','0']])->order('sort asc')->select();
         if (!$catList->isEmpty()) {
             $result['data']   = $catList->toArray();
+            $result['status'] = true;
+            $result['msg']    = '获取成功';
+        }
+        return $result;
+    }
+
+    public function getInfo()
+    {
+        $result        = [
+            'status' => false,
+            'msg'    => '获取失败',
+            'data'   => [],
+        ];
+        $id = input('id/d','0');
+
+        $goodsCatModel = new GoodsCat();
+        $cat     = $goodsCatModel->field('id,name,sort,type_id')->where([['id','=',$id]])->find();
+        if ($cat) {
+            $result['data']   = $cat->toArray();
             $result['status'] = true;
             $result['msg']    = '获取成功';
         }

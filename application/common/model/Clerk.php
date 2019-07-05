@@ -187,16 +187,29 @@ class Clerk extends Common
         $return = [
             'status' => false,
             'msg' => '不是店员',
-            'data' => []
+            'data' => [],
+            'flag' => false,
         ];
 
-        $where[] = ['user_id', 'eq', $user_id];
-        $return['data'] = $this->where($where)->find();
-        if($return['data'])
+        $settingModel = new Setting();
+        $switch = $settingModel->getValue('store_switch');
+        if($switch == 1)
         {
             $return['status'] = true;
-            $return['msg'] = '是店员';
+            $where[] = ['user_id', 'eq', $user_id];
+            $return['data'] = $this->where($where)->find();
+            if($return['data'])
+            {
+                $return['msg'] = '是店员';
+                $return['flag'] = true;
+            }
         }
+        else
+        {
+            $return['status'] = true;
+            $return['msg'] = '未开启到店自提';
+        }
+
         return $return;
     }
 
@@ -221,5 +234,24 @@ class Clerk extends Common
             $newData[] = $v['store_id'];
         }
         return $newData;
+    }
+
+
+    /**
+     * 获取店员名称
+     * @param $id
+     * @return mixed
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function getClerkName($id)
+    {
+        $where[] = ['id', 'eq', $id];
+        $info = $this->field('user_id')->where($where)->find();
+        $userModel = new User();
+        $whereu[] = ['id', 'eq', $info['user_id']];
+        $data = $userModel->field('mobile,nickname')->where($whereu)->find();
+        return $data['nickname']?$data['nickname']:$data['mobile'];
     }
 }

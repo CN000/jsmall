@@ -8,14 +8,6 @@ use think\facade\Log;
 
 class Wx
 {
-    /**
-     * 默认配置
-     * @var array
-     */
-//    private $config = [
-//        'appid' => 'wxd9d17d7370b11efd',
-//        'secret' => '172c182d95a872fbd6148f5f1b4901e6'
-//    ];
 
 
     /**
@@ -32,7 +24,8 @@ class Wx
             'msg' => ''
         );
         $url = 'https://api.weixin.qq.com/sns/jscode2session?appid='.$appid.'&secret='.$secret.'&js_code='.$code.'&grant_type=authorization_code';
-        $re = file_get_contents($url);
+        $curl = new Curl();
+        $re = $curl->get($url);
         $re = json_decode($re,true);
         if(!isset($re['errcode'])){
             $result['data'] = $re;
@@ -40,7 +33,6 @@ class Wx
         }else{
             $result['msg'] = $re['errcode'].":".$re['errmsg'];
         }
-        $result['url'] = $url;
         return $result;
     }
     /**
@@ -121,7 +113,7 @@ class Wx
      * @param string $secret
      * @return mixed
      */
-    public function getAccessToken($appid = 'wxd9d17d7370b11efd', $secret = '172c182d95a872fbd6148f5f1b4901e6')
+    public function getAccessToken($appid = '', $secret = '')
     {
         //todo::$appid和$secret从配置文件获取
         //查询是否有缓存的access_token todo::改成mysql数据库存储
@@ -137,7 +129,7 @@ class Wx
             $val = $res['access_token'];
 
             //存储缓存获取的access_token todo::改成mysql数据库存储
-            Cache::set($key, $val, 7200);
+            Cache::set($key, $val, 3600);
         }
         //返回access_token
         return $val;
@@ -147,11 +139,14 @@ class Wx
     /**
      * 二维码生成
      * @param $access_token
-     * @param string $store
      * @param string $page
+     * @param string $invite
+     * @param string $goods
+     * @param array $style
+     * @param string $wx_appid
      * @return array
      */
-    public function getParameterQRCode($access_token, $store = '', $page = 'pages/index/index', $style)
+    public function getParameterQRCode($access_token, $page = 'pages/index/index', $invite = '', $goods = '', $style = [], $wx_appid = '')
     {
         $return = [
             'status' => false,
@@ -159,7 +154,9 @@ class Wx
             'data' => ''
         ];
 
-        $filename = "qrcode/".$store."-".$style['width']."-".$style['auto_color']."-".$style['line_color_r']."-".$style['line_color_g']."-".$style['line_color_b']."-".$style['is_hyaline'].".jpg";
+        $styles = implode("-", $style);
+        $filename = "static/qrcode/wechat/".md5($page.$invite.$goods.$wx_appid.$styles).".jpg";
+
         if(file_exists($filename))
         {
             //有这个二维码了
@@ -172,17 +169,45 @@ class Wx
             //没有去官方请求生成
             $curl = new Curl();
             $url = 'https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token='.$access_token;
+            $scene = 'invite='.$invite.'&id='.$goods;
             $data = [
-                'scene' => $store,
-                'page' => $page,
-                'width' => $style['width'],
-                'auto_color' => $style['auto_color'],
-                'line_color' => ['r'=>$style['line_color_r'],'g'=>$style['line_color_g'],'b'=>$style['line_color_b']],
-                'is_hyaline' => $style['is_hyaline']
+                'scene' => $scene,
+                'page' => $page
             ];
-
+            if(isset($style['width']))
+            {
+                $data['width'] = $style['width'];
+            }
+            if(isset($style['auto_color']))
+            {
+                $data['auto_color'] = $style['auto_color'];
+            }
+            if(isset($style['line_color_r']) && isset($style['line_color_g']) && isset($style['line_color_b']))
+            {
+                $data['line_color'] = ['r'=>$style['line_color_r'],'g'=>$style['line_color_g'],'b'=>$style['line_color_b']];
+            }
+            if(isset($style['is_hyaline']))
+            {
+                $data['is_hyaline'] = $style['is_hyaline'];
+            }
             $data = json_encode($data);
             $res = $curl->post($url, $data);
+            $flag = json_decode($res, true);
+            if($flag && $flag['errcode'] == 41030)
+            {
+                $return['msg'] = '后台小程序配置的APPID和APPSECRET对应的小程序未发布上线，无法生成海报';
+                return $return;
+            }
+            elseif($flag && $flag['errcode'] == 40001)
+            {
+                $return['msg'] = '微信小程序access_token已过期，无法为你生成海报';
+                return $return;
+            }
+            elseif($flag && isset($flag['errcode']))
+            {
+                $return['msg'] = $flag['errcode'].':'.$flag['errmsg'];
+                return $return;
+            }
 
             $file = fopen($filename, "w");//打开文件准备写入
             fwrite($file, $res);//写入
@@ -222,6 +247,42 @@ class Wx
             return true;
         } else {
             return false;
+        }
+    }
+
+    /**
+     * 后台生成小程序码
+     * @param int $form_id
+     * @return bool
+     */
+    public function getFormWxcode($form_id = 0)
+    {
+        if (!$form_id) {
+            echo '关键参数丢失';
+            exit();
+        }
+        $appid       = getSetting('wx_appid');
+        $secret      = getSetting('wx_app_secret');
+        $accessToken = $this->getAccessToken($appid, $secret);
+        $path        = "pages/form/detail/form?id=" . $form_id;
+        $curl        = new Curl();
+        $url         = 'https://api.weixin.qq.com/wxa/getwxacode?access_token=' . $accessToken;
+        $data        = [
+            'path'       => $path,
+            'width'      => 300,
+            'is_hyaline' => false,
+            'auto_color' => false
+        ];
+        $data        = json_encode($data, JSON_UNESCAPED_SLASHES);
+        $res         = $curl->post($url, $data);
+        Log::info('生成小程序码消息返回：' . $res);
+        if (isjson($res)) {
+            $res = json_decode($res, true);
+            echo $res['errmsg'];
+            exit;//输出错误信息
+        } else {
+            echo $res;
+            exit();
         }
     }
 

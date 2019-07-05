@@ -6,16 +6,17 @@ Page({
   data: {
     nickname: '',
     point: 0, //用户积分
+    balance: '0.00', //用户余额
+    isPoint: false, //开启积分
     avatar: '../../image/default_avatar.png',
     bindMobile: false,
-    statusData: [], //状态数据
+    statusData: [0,0,0,0], //状态数据
     isClerk: false, //是不是店员
   },
 
   //加载执行
   onShow: function (options) {
     var page = this;
-    app.db.userToken(function (token) {
       app.api.userInfo(function (res) {
         if (res.status) {
           //如果没有头像，设置本地默认头像
@@ -26,22 +27,31 @@ Page({
           page.setData({
             nickname: res.data.nickname,
             avatar: avatar,
+            point: res.data.point,
+            balance: res.data.balance
+          });
+
+          app.api.getOrderStatusNum('1,2,3,4', function (res) {
+            page.setData({
+              statusData: res.data
+            });
+          });
+
+          //是否店员
+          app.api.isClerk(function (res) {
+            page.setData({
+              isClerk: res.flag
+            });
+          });
+
+          //是否开启积分
+          page.setData({
+            isPoint: app.config.point_switch
           });
         }
       });
 
-      app.api.getOrderStatusNum('1,2,3,4', function (res) {
-        page.setData({
-          statusData: res.data
-        });
-      });
 
-      app.api.isClerk(function(res){
-          page.setData({
-              isClerk: res.status
-          });
-      });
-    });
   },
 
   //查看全部订单
@@ -79,51 +89,17 @@ Page({
     });
   },
 
-  //积分签到
-  sign: function () {
-      var page = this;
-      app.db.userToken(function (token) {
-          app.api.isSign(function (res) {
-              if (res.status) {
-                  wx.showToast({
-                      title: '今日已签到，无需重复签到',
-                      icon: 'none',
-                      duration: 1000
-                  });
-              } else {
-                  app.api.sign(function (e) {
-                        page.myPoint();
-                        if (e.status) {
-                            wx.showToast({
-                                title: '签到成功',
-                                icon: 'success',
-                                duration: 1000
-                            });
-                        } else {
-                            wx.showToast({
-                                title: e.msg,
-                                icon: 'none',
-                                duration: 1000
-                            });
-                        }
-                  });
-              }
-          });
-      });
-    //todo:跳转到对应的积分页面
-  },
+    //我的积分
+    myPoint: function () {
+        wx.navigateTo({
+            url: '../point/point',
+        });
+    },
 
   //我的优惠券
   coupon: function () {
     wx.navigateTo({
       url: '../coupon/coupon',
-    });
-  },
-
-  //我的购物车
-  cart: function () {
-    wx.switchTab({
-      url: '/pages/cart/cartNothing/cart'
     });
   },
 
@@ -145,6 +121,13 @@ Page({
   browsingHistory: function () {
     wx.navigateTo({
       url: '../browsingHistory/browsingHistory'
+    });
+  },
+
+  // 邀请好友
+  invite: function () {
+    wx.navigateTo({
+      url: '../invite/invite'
     });
   },
 

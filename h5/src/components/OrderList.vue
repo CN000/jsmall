@@ -1,7 +1,7 @@
 <template>
     <div class="orderlist">
         <yd-list theme="4">
-            <yd-list-item v-for="(item, index) in products" :key="index" @click.native="showDetail(item.products.goods_id)">
+            <yd-list-item v-if="item.is_select == true" v-for="(item, index) in products" :key="index" @click.native="showDetail(item.products.goods_id)">
                 <img slot="img" :src="item.products.image_path">
                 <h3 class="goodsname" slot="title">{{ item.products.name }}</h3>
                 <p class="goods" slot="title">{{ item.products.spes_desc }}</p>
@@ -12,9 +12,9 @@
                     <div>x{{ item.nums }}</div>
                 </yd-list-other>
                 <yd-list-other slot="other">
-                    <div v-if="item.products.promotion_list">
+                    <div class="order-tips" v-if="item.products.promotion_list">
                         <div v-for="(val, key) in item.products.promotion_list" :key="key">
-                            <yd-badge shape="square" type="danger" v-if="val.type">{{ val.name }}</yd-badge>
+                            <yd-badge shape="square" :type="val.type === 2 ? 'danger' : ''">{{ val.name }}</yd-badge>
                         </div>
                     </div>
                 </yd-list-other>
@@ -42,4 +42,12 @@ export default {
 </script>
 
 <style type="text/css">
+   .order-tips{
+       overflow: hidden;
+       width: 100%;
+   }
+   .order-tips>div{
+       float: left;
+       margin-right: .1rem;
+   }
 </style>

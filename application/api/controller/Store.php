@@ -5,6 +5,7 @@ use app\common\model\BillLading;
 use app\common\model\Clerk;
 use app\common\model\Setting;
 use app\common\model\Store as Model;
+use org\Wx;
 use think\facade\Request;
 
 /**
@@ -24,6 +25,7 @@ class Store extends Api
             'msg' => '获取成功',
             'data' => 2
         ];
+
         $settingModel = new Setting();
         $return['data'] = $settingModel->getValue('store_switch');
         return $return;
@@ -55,7 +57,9 @@ class Store extends Api
     {
         $model = new Model();
         $key = Request::param('key', '');
-        return $model->getAllStoreList($key);
+        $longitude = Request::param('longitude', false);
+        $latitude = Request::param('latitude', false);
+        return $model->getAllStoreList($key, $longitude, $latitude);
     }
 
 
@@ -126,5 +130,52 @@ class Store extends Api
         $lading_id = Request::param('lading_id');
         $model = new BillLading();
         return $model->del($lading_id, $this->userId);
+    }
+
+
+    /**
+     * 获取邀请小程序码
+     */
+    public function getInviteQRCode()
+    {
+        $invite = Request::param('invite', 0);
+        $type = Request::param('type', 'index');
+        $goods = Request::param('goods', 0);
+        $page = 'pages/index/index';
+        if($type == 'goods')
+        {
+            $page = 'pages/goods/detail/detail';
+        }
+
+        $wx = new Wx();
+        $wx_appid = getSetting('wx_appid');
+        $wx_app_secret = getSetting('wx_app_secret');
+        $accessToken = $wx->getAccessToken($wx_appid, $wx_app_secret);
+        if($accessToken)
+        {
+            $style['width'] = 300;
+            return $wx->getParameterQRCode($accessToken, $page, $invite, $goods, $style, $wx_appid);
+        }
+        else
+        {
+            return $return = [
+                'status' => false,
+                'msg' => '后台小程序配置的APPID和APPSECRET错误，无法生成海报',
+                'data' => ''
+            ];
+        }
+    }
+
+
+    public function getRecommendKeys()
+    {
+        $recommend_keys = getSetting('recommend_keys');
+        $recommend_keys = explode(' ', $recommend_keys);
+        $result = [
+            'status' => true,
+            'msg' => '获取成功',
+            'data' => $recommend_keys
+        ];
+        return $result;
     }
 }

@@ -9,6 +9,7 @@
 
 namespace app\common\model;
 
+use think\Db;
 use think\facade\Cache;
 
 /**
@@ -26,6 +27,7 @@ class Area extends Common
     const FOUR_DEPTH = 4;
     const PROVINCE_PARENT_ID = 0;           //根节点
 
+    public $areaList; //地区数据
 
     /**
      * 指定region id的下级信息
@@ -57,24 +59,54 @@ class Area extends Common
      */
     public function getThreeAreaId($countyName, $cityName, $provinceName, $postalCode)
     {
-        $county = $this->where('name', 'eq', $countyName)
-            ->find();
-        if ($county) {
-            $id = $county['id'];
-        } else {
-            $city = $this->where('name', 'eq', $cityName)
+        $where1[] = ['name', 'eq', $countyName];
+        $where1[] = ['depth', 'eq', self::COUNTY_DEPTH];
+        $county = $this->where($where1)
+            ->select();
+        if(count($county) > 0)
+        {
+            if(count($county) > 1)
+            {
+                $where2[] = ['name', 'eq', $cityName];
+                $where2[] = ['depth', 'eq', self::CITY_DEPTH];
+                $city = $this->where($where2)
+                    ->find();
+                foreach($county as $k => $v)
+                {
+                    if($v['parent_id'] == $city['id'])
+                    {
+                        $id = $v['id'];
+                    }
+                }
+            }
+            else
+            {
+                $id = $county[0]['id'];
+            }
+        }
+        else
+        {
+            $where2[] = ['name', 'eq', $cityName];
+            $where2[] = ['depth', 'eq', self::CITY_DEPTH];
+            $city = $this->where($where2)
                 ->find();
-            if ($city) {
+            if($city)
+            {
                 //创建区域
                 $county_data['parent_id']   = $city['id'];
                 $county_data['depth']       = self::COUNTY_DEPTH;
                 $county_data['name']        = $countyName;
                 $county_data['postal_code'] = $postalCode;
                 $id                         = $this->insertGetId($county_data);
-            } else {
-                $province = $this->where('name', 'eq', $provinceName)
+            }
+            else
+            {
+                $where3[] = ['name', 'eq', $provinceName];
+                $where3[] = ['depth', 'eq', self::PROVINCE_DEPTH];
+                $province = $this->where($where3)
                     ->find();
-                if ($province) {
+                if($province)
+                {
                     //创建城市
                     $city_data['parent_id'] = $province['id'];
                     $city_data['depth']     = self::CITY_DEPTH;
@@ -87,7 +119,9 @@ class Area extends Common
                     $county_data['name']        = $countyName;
                     $county_data['postal_code'] = $postalCode;
                     $id                         = $this->insertGetId($county_data);
-                } else {
+                }
+                else
+                {
                     //创建省份
                     $province_data['parent_id'] = self::PROVINCE_PARENT_ID;
                     $province_data['depth']     = self::PROVINCE_DEPTH;
@@ -217,6 +251,7 @@ class Area extends Common
      */
     public function add($data)
     {
+        Cache::set('area_tree', '');//清理地区缓存
         return $this->insert($data);
     }
 
@@ -241,6 +276,7 @@ class Area extends Common
      */
     public function edit($id, $data)
     {
+        Cache::set('area_tree', '');//清理地区缓存
         return $this->where('id', 'eq', $id)
             ->update($data);
     }
@@ -256,6 +292,7 @@ class Area extends Common
      */
     public function del($id)
     {
+        Cache::set('area_tree', '');//清理地区缓存
         $is_parent = $this->where('parent_id', 'eq', $id)->find();
         if ($is_parent) {
             $result = array(
@@ -282,10 +319,14 @@ class Area extends Common
         return $result;
     }
 
+
     /**
      * 根据id来返回省市区信息，如果没有查到，就返回省的列表
-     * @param int $id 省市区id，不传为直接取省的信息
+     * @param int $id //省市区id，不传为直接取省的信息
      * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
     public function getArea($id = 0)
     {
@@ -297,17 +338,20 @@ class Area extends Common
         return $data;
     }
 
+
     /**
      * 递归取得父节点信息
-     * @author sin
      * @param $id
      * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
     public function getParentArea($id)
     {
-        $data['info'] = $this->field('id,name,parent_id')->where(array('id' => $id))->find();
+        $data['info'] = $this->field('id,name,parent_id,postal_code')->where(array('id' => $id))->find();
         if ($data['info']) {
-            $data['list'] = $this->field('id,name,parent_id')->where(array('parent_id' => $data['info']['parent_id']))->select();
+            $data['list'] = $this->field('id,name,parent_id,postal_code')->where(array('parent_id' => $data['info']['parent_id']))->select();
             if ($data['info']['parent_id'] != self::PROVINCE_PARENT_ID) {
                 //上面还有节点
                 $pdata = $this->getParentArea($data['info']['parent_id']);
@@ -323,58 +367,84 @@ class Area extends Common
         return $pdata;
     }
 
+
     /**
      * 获取所有省市区信息
+     * @param array $checked
      * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
-    public function getTreeArea($checked = [])
+    public function getTreeArea($checked = [],$parent_id=0,$currentChecked='0')
     {
-        //$this->delAreaCache();
-        $area_tree = Cache::get('area_tree');
+        $return_data = [
+            'status' => false,
+            'msg'    => '查询失败',
+            'data'   => [],
+        ];
+       /* $area_tree = Cache::get('area_tree');
         if ($area_tree) {
             $list = json_decode($area_tree, true);
         } else {
-            $list = $this->where([])->select()->toArray();
+            $list = $this->where(['parent_id'=>$parent_id])->select()->toArray();
             Cache::set('area_tree', json_encode($list));
-        }
-        $tree = $this->resolve2($list, 0, $checked);
-        return $tree;
+        }*/
+        $list = $this->where(['parent_id'=>$parent_id])->select()->toArray();
+        $tree = $this->resolve2($list, $checked,$currentChecked);
+        $return_data['data'] = $tree;
+        $return_data['msg'] = '查询成功';
+        $return_data['status'] = true;
+        return $return_data;
     }
 
-    private function resolve2($list, $pid = 0, $checked = [])
-    {
-        $manages = array();
-        $i       = 0;
-        foreach ($list as $row) {
-            if ($row['parent_id'] == $pid) {
-                $row['checkboxValue'] = $row['id'];
-                if ($checked && in_array($row['id'], $checked)) {
-                    $row['checked'] = true;
-
-                } else {
-                    $row['checked'] = false;
-                }
-                $manages[$i] = $row;
-                $children    = $this->resolve2($list, $row['id'], $checked);
-                $children && $manages[$i]['children'] = $children;
-                $i++;
-            }
-        }
-        return $manages;
-    }
 
     /**
-     * 删除地区树缓存
+     * 组装地区数据
+     * @param int $list
+     * @param array $checked
+     * @param string $currentChecked
+     * @return mixed
      */
-    public function delAreaCache()
+    public function resolve2($list = 0, $checked = [], $currentChecked = '0')
     {
-        Cache::set('area_tree', '');
+        foreach ($list as $key => $val) {
+            $isChecked = '0';
+            //判断是否选中的数据
+
+            if (isset($checked[$val['id']]) && $checked[$val['id']]) {
+                $isChecked = $checked[$val['id']]['ischecked'];
+            }
+            if (isset($checked[$val['parent_id']]) && $checked[$val['parent_id']] && $checked[$val['parent_id']]['ischecked'] == '1') {
+                $isChecked = '1';
+            }
+            //当前父节点是1，下面肯定都是1
+            if ($currentChecked == '1') {
+                $isChecked = '1';
+            }
+            $isLast = false;
+            $chid   = $this->where(['parent_id' => $val['id']])->count();
+            if (!$chid) {
+                $isLast = true;
+            }
+            $area_tree[$key] = [
+                'id'       => $val['id'],
+                'title'    => $val['name'],
+                'isLast'   => $isLast,
+                'level'    => $val['depth'],
+                'parentId' => $val['parent_id'],
+                "checkArr" => [
+                    'type'      => '0',
+                    'isChecked' => $isChecked,
+                ]
+            ];
+        }
+        return $area_tree;
     }
 
 
     /**
      * 根据输入的查询条件，返回所需要的where
-     * @author sin
      * @param $post
      * @return mixed
      */
@@ -390,6 +460,11 @@ class Area extends Common
         return $result;
     }
 
+
+    /**
+     * @param $list
+     * @return mixed
+     */
     protected function tableFormat($list)
     {
         foreach ($list as $key => $val) {
@@ -406,4 +481,54 @@ class Area extends Common
         }
         return $list;
     }
+
+    /***
+     * 递归循环取出
+     * @param $areaId
+     * @param array $ids
+     * @return array|\PDOStatement|string|\think\Collection
+     */
+    public function getAllChildArea($areaId, &$ids = [])
+    {
+        $data = $this->where([
+            'parent_id' => intval($areaId),
+        ])->select();
+        if (!$data->isEmpty()) {
+            $data = $data->toArray();
+            foreach ((array)$data as $key => $val) {
+                $ids[] = $val['id'];
+                if ($val['depth'] < 3) {
+                    $data[$key]['child'] = $this->getAllChildArea($val['id'], $ids);
+                }
+            }
+        }
+        return $data;
+    }
+
+    /**
+     * 获取完整路径
+     * @param int $area_id
+     * @return array
+     */
+    public function getFullPathArea($area_id = 0)
+    {
+        $data['info'] = $this->field('id,name,parent_id,postal_code')->where(array('id' => $area_id))->find();
+        if ($data['info']) {
+            $parent = $this->field('id,name,parent_id,postal_code')->where(array('parent_id' => $data['info']['parent_id']))->find();
+            if ($data['info']['parent_id'] != self::PROVINCE_PARENT_ID) {
+                //上面还有节点
+                $pdata = $this->getFullPathArea($data['info']['parent_id']);
+                if ($pdata) {
+                    $pdata[] = $data;
+                }
+            } else {
+                $pdata[] = $data;
+            }
+        } else {
+            return [];
+        }
+        return $pdata;
+    }
+
+
 }

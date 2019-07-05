@@ -28,7 +28,7 @@ class MessageCenter extends Common
             'wx_tpl_message' => self::SEND_FALSE,           //当type是2的时候，这个字段可能没用
         ],
         'remind_order_pay' =>[                              //订单快关闭的时候，提醒用户去支付
-            'name' => '订单支付提醒',
+            'name' => '订单催付提醒',
             'sms' => self::SEND_FALSE,
             'message' => self::SEND_TRUE,
             'wx_tpl_message' => self::SEND_FALSE,
@@ -51,6 +51,12 @@ class MessageCenter extends Common
             'message' => self::SEND_TRUE,
             'wx_tpl_message' => self::SEND_FALSE,
         ],
+        'seller_order_notice' =>[                              //订单付款
+            'name' => '订单付款成功平台通知',
+            'sms' => self::SEND_TRUE,
+            'message' => self::SEND_FALSE,
+            'wx_tpl_message' => self::SEND_FALSE,
+        ]
     ];
 
     //取得商户消息配置参数,返回layui的格式
@@ -101,6 +107,9 @@ class MessageCenter extends Common
         if($info['sms'] == self::SEND_TRUE){
             //判断短信是否够,如果够，就去发
             $mobile = get_user_info($user_id,'mobile');
+            if($code == 'seller_order_notice'){
+                $mobile = getSetting('shop_mobile');
+            }
             if($mobile){
                 $smsModel = new Sms();
                 $smsModel->send($mobile,$code,$params);

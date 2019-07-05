@@ -10,9 +10,12 @@
     </div>
 
     <div class="layui-form-item layui-upload">    	
-    	<label class="layui-form-label"><i class="required-color">*</i> LOGO：</label>
+    	<label class="layui-form-label">LOGO：</label>
     	<div class="layui-input-inline seller-inline-4">
         	{Jshop:image id='logo' name="logo" value="$data['logo']"/}
+            <div class="layui-form-mid layui-word-aux list-tag">
+                图标尺寸建议：120px*120px
+            </div>
     	</div>
     </div>
 
@@ -22,7 +25,7 @@
             <input type="text" name="sort" required lay-verify="required" placeholder="数值越小越靠前" autocomplete="off" class="layui-input" value="{$data.sort}">
         </div>
     </div>
-
+    {:jshopToken()}
     <button class="layui-btn layui-btn-fluid add-save-btn" lay-submit lay-filter="brand-edit">保存</button>
 
 </div>

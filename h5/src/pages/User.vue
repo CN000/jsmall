@@ -3,6 +3,9 @@
         <userheader
             :avatar="user.avatar"
             :name="user.nickname"
+            :balance="user.balance"
+            :point="user.point"
+            :isOpenIntegral="isOpenIntegral"
             @upload="uploadAvatar"
         ></userheader>
         <yd-cell-group>
@@ -34,6 +37,10 @@
             </yd-grids-group>
         </yd-cell-group>
         <yd-cell-group>
+            <yd-cell-item v-if="isOpenIntegral" type="div" @click.native="signIn">
+                <img slot="icon" src="../../static/image/signin.png">
+                <span slot="left">积分签到</span>
+            </yd-cell-item>
             <yd-cell-item href="/coupon" type="link">
                 <img slot="icon" src="../../static/image/coupon.png">
                 <span slot="left">我的优惠券</span>
@@ -43,7 +50,7 @@
                 <span slot="left">我的购物车</span>
             </yd-cell-item>
             <yd-cell-item href="/balance" type="link">
-                <img slot="icon" src="../../static/image/balance.png">
+                <img slot="icon" src="../../static/image/remainingsum.png">
                 <span slot="left">我的余额</span>
             </yd-cell-item>
         </yd-cell-group>
@@ -59,12 +66,22 @@
         </yd-cell-group>
         <yd-cell-group>
             <yd-cell-item href="/share" type="link">
-                <img slot="icon" src="../../static/image/coupon.png">
-                <span slot="left">我要推荐</span>
+                <img slot="icon" src="../../static/image/me-ic-invite.png">
+                <span slot="left">邀请好友</span>
             </yd-cell-item>
             <yd-cell-item href="/addresslist" type="link">
-                <img slot="icon" src="../../static/image/ship.png">
+                <img slot="icon" src="../../static/image/me-ic-site.png">
                 <span slot="left">收货地址</span>
+            </yd-cell-item>
+        </yd-cell-group>
+        <yd-cell-group v-if="isClerk">
+            <yd-cell-item href="/storeorder" type="link">
+                <img slot="icon" src="../../static/image/coupon.png">
+                <span slot="left">提货单列表</span>
+            </yd-cell-item>
+            <yd-cell-item href="/orderverification" type="link">
+                <img slot="icon" src="../../static/image/ship.png">
+                <span slot="left">提货单核销</span>
             </yd-cell-item>
         </yd-cell-group>
     </div>
@@ -76,42 +93,63 @@ export default {
     data () {
         return {
             user: [],
-            orderNum: []
+            orderNum: [],
+            isOpenIntegral: false, // 用户是否开启积分
+            isClerk: false // 是否是店员并且开启店铺自提
         }
     },
     components: {
         userheader
     },
     mounted () {
-        this.initUserData()
+        this.getUserInfo()
+        this.getOrderSum()
+        this.isOpenPoint()
     },
     methods: {
-        initUserData () {
-            // 获取用户昵称头像等信息
+        // 获取用户昵称头像等信息
+        getUserInfo () {
             this.$api.userInfo({}, res => {
                 if (res.status) {
                     this.user = res.data
+                    this.storeUser(res.data)
                 }
             })
-            // 获取订单不同状态的数量
+        },
+        // 获取订单不同状态的数量
+        getOrderSum () {
             this.$api.getOrderStatusSum({}, res => {
                 this.orderNum = res.data
+            })
+        },
+        // 判断是否开启积分
+        isOpenPoint () {
+            this.$api.isPoint({}, res => {
+                if (res.status) {
+                    res.data === 1 ? this.isOpenIntegral = true : this.isOpenIntegral = false
+                }
+            })
+        },
+        // 判断是否是店员
+        storeUser (userId) {
+            this.$api.isStoreUser({user_id: userId}, res => {
+                if (res.status) {
+                    this.isClerk = res.flag
+                }
             })
         },
         // 用户头像上传
         uploadAvatar (e) {
             let file = e.target.files[0]
-            let param = new FormData()
-            param.append('upfile', file, file.name)
-            this.$api.uploadFile('image', param, res => {
+            let data = new FormData()
+            data.append('upfile', file, file.name)
+            this.$api.uploadFile(data, res => {
                 if (res.status) {
                     let avatar = res.data.url // 上传成功的图片地址
                     // 执行头像修改
-                    console.log(this)
                     this.$api.changeAvatar({
                         avatar: avatar
                     }, res => {
-                        console.log(res)
                         if (res.status) {
                             this.user.avatar = res.data.avatar
                             this.$dialog.toast({
@@ -122,11 +160,21 @@ export default {
                     })
                 }
             })
+        },
+        // 用户签到
+        signIn () {
+            this.$api.sign({}, res => {
+                if (res.status) {
+                    this.$dialog.toast({
+                        mes: '签到成功!',
+                        timeout: 1300,
+                        callback: () => {
+                            this.getUserInfo()
+                        }
+                    })
+                }
+            })
         }
-    },
-    // 页面缓存后每次进入都重新请求订单数量
-    activated () {
-        this.initUserData()
     }
 }
 </script>
@@ -135,4 +183,7 @@ export default {
     .user .yd-btn-block{
         height: .8rem;
     }
+	.user .yd-cell-item:not(:last-child):after{
+		border-bottom: 1px solid #e9e9e9;
+	}
 </style>

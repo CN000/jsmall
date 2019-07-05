@@ -18,7 +18,7 @@ const routers = [{
             navShow: false,
             tabShow: true,
             title: '用户绑定',
-            keepAlive: true
+            keepAlive: false
         }
     },
     {
@@ -28,7 +28,8 @@ const routers = [{
         meta: {
             navShow: false,
             tabShow: false,
-            keepAlive: true
+            title: '登录授权中',
+            keepAlive: false
         }
     },
     {
@@ -133,6 +134,18 @@ const routers = [{
         }
     },
     {
+        path: '/payresult',
+        component: resolve => require(['../pages/order/PayResult'], resolve),
+        name: 'PayResult',
+        meta: {
+            tabShow: false,
+            navShow: true,
+            title: '支付结果',
+            keepAlive: false,
+            isLogin: true
+        }
+    },
+    {
         path: '/allorder',
         component: resolve => require(['../pages/order/AllOrder'], resolve),
         name: 'AllOrder',
@@ -149,8 +162,21 @@ const routers = [{
         component: resolve => require(['../pages/order/OrderDetail'], resolve),
         name: 'OrderDetail',
         meta: {
+            navShow: true,
             tabShow: false,
             title: '订单详情',
+            keepAlive: false,
+            isLogin: true
+        }
+    },
+    {
+        path: '/express',
+        component: resolve => require(['../pages/order/Express'], resolve),
+        name: 'Express',
+        meta: {
+            navShow: true,
+            tabShow: false,
+            title: '物流信息',
             keepAlive: false,
             isLogin: true
         }
@@ -207,6 +233,7 @@ const routers = [{
         component: resolve => require(['../pages/other/Notice'], resolve),
         name: 'Notice',
         meta: {
+			navShow: true,
             tabShow: false,
             title: '公告详情',
             keepAlive: false
@@ -433,8 +460,73 @@ const routers = [{
             title: '文章列表',
             keepAlive: false
         }
+    },
+    {
+        path: '/storeorder',
+        component: resolve => require(['../pages/store/Order'], resolve),
+        name: 'StoreOrder',
+        meta: {
+            navShow: true,
+            tabShow: false,
+            title: '店铺提货订单',
+            keepAlive: false
+        }
+    },
+    {
+        path: '/orderverification',
+        component: resolve => require(['../pages/store/OrderVerification'], resolve),
+        name: 'OrderVerification',
+        meta: {
+            navShow: true,
+            tabShow: false,
+            title: '提货单核销',
+            keepAlive: false
+        }
+    },
+    {
+        path: '/seckilldetail',
+        component: resolve => require(['../pages/activity/SecKilldetail'], resolve),
+        name: 'SecKillDetail',
+        meta: {
+            navShow: false,
+            tabShow: false,
+            title: '秒杀活动',
+            keepAlive: false
+        }
+    },
+    {
+        path: '/groupbuying',
+        component: resolve => require(['../pages/activity/GroupBuying'], resolve),
+        name: 'GroupBuying',
+        meta: {
+            navShow: false,
+            tabShow: false,
+            title: '团购活动',
+            keepAlive: false
+        }
+    },
+    {
+        path: '/invoice',
+        component: resolve => require(['../pages/order/Invoice'], resolve),
+        name: 'GroupBuying',
+        meta: {
+            navShow: true,
+            tabShow: false,
+            title: '发票',
+            keepAlive: false
+        }
+    },
+    {
+        path: '/recharge',
+        component: resolve => require(['../pages/balance/Recharge'], resolve),
+        name: 'Recharge',
+        meta: {
+            navShow: true,
+            tabShow: false,
+            title: '余额充值',
+            keepAlive: false
+        }
     }
-
 ]
 
 export default routers

@@ -6,9 +6,7 @@
 // +----------------------------------------------------------------------
 // | Author: tianyu <tianyu@jihainet.com>
 // +----------------------------------------------------------------------
-
 namespace app\common\model;
-
 use app\common\model\Promotion;
 
 class Coupon extends Common
@@ -46,7 +44,6 @@ class Coupon extends Common
 
     /**
      * 用户领取优惠券 插入数据
-     * @param $seller_id
      * @param $user_id
      * @param $promotion_id
      * @return array
@@ -99,6 +96,10 @@ class Coupon extends Common
         if(isset($post['is_used']) && $post['is_used'] != ""){
             $where[] = ['is_used','eq',$post['is_used']];
         }
+        if (isset($post['code']) && $post['code'] != "")
+        {
+            $where[] = ['coupon_code', 'like', '%'.$post['code'].'%'];
+        }
         if(isset($post['date']) && $post['date'] != ""){
             $theDate = explode(' 到 ',$post['date']);
             if(count($theDate) == 2){
@@ -119,7 +120,7 @@ class Coupon extends Common
     protected function tableFormat($list)
     {
         foreach ($list as $key => $val) {
-            $list[$key]['utime'] = date('Y-m-d H:i:s',$val['utime']);
+            $list[$key]['ctime'] = date('Y-m-d H:i:s',$val['ctime']);
             if ($val['is_used'] == self::USED_YES)
             {
                 $list[$key]['used_name'] = model('User')->where('id',$val['used_id'])->value('nickname');
@@ -157,31 +158,90 @@ class Coupon extends Common
      * @throws \think\db\exception\ModelNotFoundException
      * @throws \think\exception\DbException
      */
-    public function getMyCoupon($user_id, $promotion_id = '', $display = 'all')
+    public function getMyCoupon($user_id, $promotion_id = '', $display = 'all', $page = 1, $limit = 10)
     {
-        $where[] = ['user_id','eq',$user_id];
+        $return = [
+            'status' => false,
+            'msg' => '获取失败',
+            'data' => [
+                'list' => [],
+                'count' => 0,
+                'page' => $page,
+                'limit' => $limit,
+                'q_type' => $display
+            ]
+        ];
+        $where[] = ['c.user_id', 'eq', $user_id];
+        $where[] = ['p.type', 'eq', 2];
         if($display == 'no_used')
         {
-            $where[] = ['is_used', 'eq', self::USED_NO];
+            $where[] = ['c.is_used', 'eq', self::USED_NO];
+            $where[] = ['p.etime', '>=', time()];
         }
-
+        if($display == 'yes_used')
+        {
+            $where[] = ['c.is_used', 'eq', self::USED_YES];
+        }
+        if($display == 'invalid')
+        {
+            $where[] = ['c.is_used', 'eq', self::USED_NO];
+            $where[] = ['p.etime', '<', time()];
+        }
         if($promotion_id)
         {
-            $where[] = ['promotion_id','eq',$promotion_id];
+            $where[] = ['c.promotion_id','eq',$promotion_id];
         }
-        $list = $this::with('promotion')->where($where)->select();
-        if(!$list->isEmpty()){
-            foreach($list as $k =>$v){
-                if($v['etime']<time()){
-                    $list[$k]['overdue'] = true;
-                }else{
-                    $list[$k]['overdue'] = false;
+        else
+        {
+            $where[] = ['p.status', 'eq', 1];
+        }
+
+        $return['data']['list'] = $this->alias('c')
+            ->join('promotion p', 'p.id = c.promotion_id')
+            ->where($where)
+            ->order('c.ctime asc')
+            ->page($page, $limit)
+            ->select();
+
+        $return['data']['count'] = $this->alias('c')
+            ->join('promotion p', 'p.id = c.promotion_id')
+            ->where($where)
+            ->count();
+
+        if($return['data']['list'] !== false)
+        {
+            $return['status'] = true;
+            $return['msg'] = '获取成功';
+            if(count($return['data']['list']) > 0)
+            {
+                $conditionModel = new PromotionCondition();
+                $resultModel = new PromotionResult();
+                foreach($return['data']['list'] as $k => $v)
+                {
+                    $pcondition = $conditionModel->getConditionList($v['id']);
+                    $presult = $resultModel->getResultList($v['id']);
+                    $expression1 = '';
+                    $expression2 = '';
+                    foreach($pcondition as $kk => $vv)
+                    {
+                        $expression1 .= $conditionModel->getConditionMsg($vv['code'], $vv['params']);
+                    }
+                    foreach($presult as $kk => $vv)
+                    {
+                        $expression2 .= $resultModel->getResultMsg($vv['code'], $vv['params']);
+                    }
+                    $return['data']['list'][$k]['expression1'] = $expression1;
+                    $return['data']['list'][$k]['expression2'] = $expression2;
+                    $return['data']['list'][$k]['is_expire'] = $v['etime'] > time() ? 1 : 2;
+                    $return['data']['list'][$k]['start_time'] = $v['stime'];
+                    $return['data']['list'][$k]['end_time'] = $v['etime'];
+                    $return['data']['list'][$k]['stime'] = date('Y-m-d', $v['stime']);
+                    $return['data']['list'][$k]['etime'] = date('Y-m-d', $v['etime']);
                 }
-                $list[$k]['stime'] = date('Y-m-d',$v['stime']);
-                $list[$k]['etime'] = date('Y-m-d',$v['etime']);
+
             }
         }
-        return $list;
+        return $return;
     }
 
     /**
@@ -282,7 +342,6 @@ class Coupon extends Common
     /**
      * 删除核销多个优惠券
      * @param $coupon_code
-     * @param $seller_id
      * @param $user_id
      * @return array|mixed
      * @throws \think\db\exception\DataNotFoundException
@@ -370,5 +429,55 @@ class Coupon extends Common
      */
     private function getCouponNumber($id){
         return strtoupper(substr_replace(dechex($id),substr(md5(uniqid(rand(), true)),4,16),2,0));
+    }
+
+    /**
+     * 通过优惠券号领取优惠券
+     * @param $user_id
+     * @param $coupon_code
+     * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function receiveCoupon($user_id, $coupon_code)
+    {
+        $return = [
+            'status' => false,
+            'data' => '',
+            'msg' => '领取失败',
+        ];
+
+        $where[] = ['coupon_code', 'eq', $coupon_code];
+        $flag = $this->where($where)->find();
+
+        if($flag['used_id'])
+        {
+            $return['msg'] = '该优惠券已被使用';
+            return $return;
+        }
+        if($flag['user_id'])
+        {
+            $return['msg'] = '该优惠券已被其他人领取';
+            return $return;
+        }
+
+        $data['user_id'] = $user_id;
+        $result = $this->save($data, $where);
+
+        if($result !== false)
+        {
+            $return['data'] = $this->where($where)->find();
+            if($return['data']['promotion_id'])
+            {
+                $promotionModel = new \app\common\model\Promotion();
+                $w[] = ['id', 'eq', $return['data']['promotion_id']];
+                $promotion = $promotionModel->field('name')->where($w)->find();
+                $return['data']['coupon_name'] = $promotion['name'];
+            }
+            $return['status'] = true;
+            $return['msg'] = '领取成功';
+        }
+        return $return;
     }
 }

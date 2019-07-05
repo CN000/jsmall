@@ -19,34 +19,28 @@ class Exp{
 
     private $url = 'http://poll.kuaidi100.com/poll/query.do';
 
-    public function __construct($key, $customer){
-        $this->key = $key;
-        $this->customer = $customer;
-    }
-
-
-    /**
-     *
-     *  执行查询
-     */
-    public function query ($com, $no)
+    public function __construct()
     {
-        return $this->postCurl($this->url, $this->assembleParam($com, $no));
-    }
+        $this->key       = config('jshop.api_express.key');
+        $this->customer = config('jshop.api_express.customer');
 
+        if (getSetting('kuaidi100_customer') && getSetting('kuaidi100_key')) {
+            $this->customer = getSetting('kuaidi100_customer');
+            $this->key       = getSetting('kuaidi100_key');
+        }
+    }
 
 
     /**
      *  组装params
      *
      */
-    private function assembleParam ($com, $no)
+    public function assembleParam ($com, $no)
     {
         $data['customer'] = $this->customer;
-        $data['param'] = '{"com":"'.$com.'","num":"'.$no.'"}';
+        $data['param'] = '{"com":"'.$com.'","num":"'.trim($no).'"}';
         $data['sign'] = $this->toSign($data['param'], $this->key, $data['customer']);
         $vo = '';
-
         foreach ($data as $k => $v) {
             $vo.= "$k=".urlencode($v)."&";		//默认UTF-8编码格式
         }
@@ -71,16 +65,20 @@ class Exp{
      * curl post请求
      *
      */
-    public function postCurl($url, $params){
+    public function postCurl($params){
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_URL, $this->url);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+        if (defined('CURLOPT_IPRESOLVE') && defined('CURL_IPRESOLVE_V4')) {
+            curl_setopt($ch, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+        }
         $result = curl_exec($ch);
         curl_close( $ch );
-        $data = str_replace("\"",'"', $result);
-        $data = json_decode($data, true);
+        $data = str_replace("\"",'"',$result );
+        $data = json_decode($data,true);
         return $data;
     }
 }

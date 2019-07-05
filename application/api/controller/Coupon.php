@@ -7,10 +7,11 @@
 // | Author: tianyu <tianyu@jihainet.com>
 // +----------------------------------------------------------------------
 namespace app\api\controller;
-
 use app\common\model\Promotion;
 use app\common\model\Coupon as couponModel;
 use app\common\controller\Api;
+use think\facade\Request;
+
 
 class Coupon extends Api
 {
@@ -30,9 +31,10 @@ class Coupon extends Api
         ];
 
         $promotionModel = new Promotion();
-        $res = $promotionModel->receiveCouponList();
+        $limit = Request::param('limit', 3);
+        $res = $promotionModel->receiveCouponList($limit);
 
-        if ( $res )
+        if($res)
         {
             $result['status'] = true;
             $result['data'] = $res;
@@ -85,21 +87,12 @@ class Coupon extends Api
      */
     public function userCoupon()
     {
-        $result = [
-            'status' => false,
-            'data' => [],
-            'msg' => '获取失败'
-        ];
         $couponModel = new couponModel();
-        $res = $couponModel->getMyCoupon($this->userId, '', input('display', 'all'));
-
-        if ( $res )
-        {
-            $result['status'] = true;
-            $result['data'] = $res;
-            $result['msg'] = '获取成功';
-        }
-        return $result;
+        $page = Request::param('page', 1);
+        $limit = Request::param('limit', 10);
+        $display = Request::param('display', 'all');
+        $res = $couponModel->getMyCoupon($this->userId, '', $display, $page, $limit);
+        return $res;
     }
 
     /**
@@ -123,12 +116,50 @@ class Coupon extends Api
         }
         //判断用户是否已领取?
         $couponModel = new couponModel();
-        $coupon = $couponModel->getMyCoupon($this->userId,input('promotion_id'));
-        if ( !$coupon->isEmpty() )
+        $coupon = $couponModel->getMyCoupon($this->userId, input('promotion_id'));
+        if ( count($coupon['data']['list']) > 0 )
         {
             return error_code(15008);
         }
 
         return $couponModel->addData($this->userId,input('promotion_id'));
+    }
+
+    /**
+     * 输入优惠券号领取优惠券
+     * @return array|mixed
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
+     */
+    public function getCouponKey()
+    {
+        $key = Request::param('key', false);
+        if(!$key)
+        {
+            return error_code(15006);
+        }
+        $couponModel = new couponModel();
+        $where[] = ['coupon_code', 'eq', $key];
+        $coupon = $couponModel->field('promotion_id')->where($where)->find();
+        if(!$coupon['promotion_id'])
+        {
+            return error_code(15009);
+        }
+
+        //判断优惠券是否可以领取?
+        $promotionModel = new Promotion();
+        if(!$promotionModel->receiveCoupon($coupon['promotion_id']))
+        {
+            return error_code(15007);
+        }
+        //判断用户是否已领取?
+        $coupon = $couponModel->getMyCoupon($this->userId, $coupon['promotion_id']);
+        if(!$coupon->isEmpty())
+        {
+            return error_code(15008);
+        }
+
+        return $couponModel->receiveCoupon($this->userId, $key);
     }
 }

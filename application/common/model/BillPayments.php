@@ -22,6 +22,9 @@ class BillPayments extends Common
     const STATUS_OTHER = 3;        //支付状态，其他
 
     const TYPE_ORDER = 1;       //单据类型 订单
+    const TYPE_RECHARGE = 2;       //单据类型 充值
+    const TYPE_FORM_ORDER = 5;       //单据类型 表单订单
+    const TYPE_FORM_PAY = 6;       //单据类型 表单付款码
 
 //
 //    const SEX_BOY = 1;
@@ -77,12 +80,20 @@ class BillPayments extends Common
         if(isset($post['payment_id']) && $post['payment_id'] != ""){
             $where[] = ['payment_id', 'like', '%'.$post['payment_id'].'%'];
         }
+        if(isset($post['date']) && $post['date'] != "")
+        {
+            $date = explode(' 到 ', $post['date']);
+            $where[] = ['ctime', 'between time', [$date[0].' 00:00:00', $date[1].' 23:59:59']];
+        }
         if(isset($post['mobile']) && $post['mobile'] != ""){
             if($user_id = get_user_id($post['mobile'])){
                 $where[] = ['user_id', 'eq', $user_id];
             }else{
                 $where[] = ['user_id', 'eq', '99999999'];       //如果没有此用户，那么就赋值个数值，让他查不出数据
             }
+        }
+        if(isset($post['id']) && $post['id'] != ""){
+            $where[] = ['payment_id', 'in', $post['id']];
         }
         if(isset($post['trade_no']) && $post['trade_no'] != ""){
             $where[] = ['trade_no', 'eq', $post['trade_no']];
@@ -114,7 +125,7 @@ class BillPayments extends Common
                 $list[$k]['user_id'] = get_user_info($v['user_id']);
             }
             if($v['payment_code']) {
-                $list[$k]['payment_code'] = config('params.payments')[$v['payment_code']];
+                $list[$k]['payment_code'] = config('params.payment_type')[$v['payment_code']];
             }
             if($v['utime']) {
                 $list[$k]['utime'] = getTime($v['utime']);
@@ -143,6 +154,7 @@ class BillPayments extends Common
         if(!$paymentInfo){
             return error_code(10050);
         }
+
         $result = $this->toAdd($source_str, $payment_code, $user_id, $type,$params);
         if(!$result['status']){
             return $result;
@@ -155,13 +167,13 @@ class BillPayments extends Common
         $payment = \org\Payment::create($payment_code,$conf);       //'wechatpay'
         $result1 = $payment->pay($result['data']);
 
-        //更新
-        if($result1['status'])
-        {
-            $wh[] = ['payment_id', 'eq', $result['data']['payment_id']];
-            $da['generate_params'] = json_encode($result1['data']);
-            $this->save($da, $wh);
-        }
+        //更新，存储微信支付生成的参数
+//        if($result1['status'])
+//        {
+//            $wh[] = ['payment_id', 'eq', $result['data']['payment_id']];
+//            $da['generate_params'] = json_encode($result1['data']);
+//            $this->save($da, $wh);
+//        }
 
         return $result1;
 
@@ -175,50 +187,50 @@ class BillPayments extends Common
      * @param int $type             支付类型
      * @return array
      */
-    public function toAdd($source_str, $payment_code, $user_id = '', $type = self::TYPE_ORDER,$params = [])
+    public function toAdd($source_str, $payment_code, $user_id = '', $type = self::TYPE_ORDER, $params = [])
     {
         $result = [
             'status' => false,
-            'data' => array(),
-            'msg' => ''
+            'data'   => array(),
+            'msg'    => ''
         ];
         //判断支付方式
         $paymentsModel = new Payments();
-        $paymentsInfo = $paymentsModel->getPayment($payment_code, $paymentsModel::PAYMENT_STATUS_YES);
-        if(!$paymentsInfo){
+        $paymentsInfo  = $paymentsModel->getPayment($payment_code, $paymentsModel::PAYMENT_STATUS_YES);
+        if (!$paymentsInfo) {
             return error_code(10058);
         }
 
-        $paymentRel = $this->formatPaymentRel($source_str, $type);
-        if(!$paymentRel['status']){
+        $paymentRel = $this->formatPaymentRel($source_str, $type, $params);
+        if (!$paymentRel['status']) {
             return $paymentRel;
         }
 
         Db::startTrans();
         try {
             $data['payment_id'] = get_sn(2);
-            $data['money'] = $paymentRel['data']['money'];
-            if($user_id == ''){
+            $data['money']      = $paymentRel['data']['money'];
+            if ($user_id == '') {
                 $data['user_id'] = $paymentRel['data']['user_id'];
-            }else{
+            } else {
                 $data['user_id'] = $user_id;
             }
+            $data['type']         = $type;//保存类型
             $data['payment_code'] = $payment_code;
-            $data['ip'] = get_client_ip();
-            $data['params'] = json_encode($params);         //支付的时候，用到的参数
+            $data['ip']           = get_client_ip();
+            $data['params']       = json_encode($params);         //支付的时候，用到的参数
             $this->save($data);
             //上面保存好收款单表，下面保存收款单明细表
-            foreach($paymentRel['data']['rel'] as $k => $v){
+            foreach ($paymentRel['data']['rel'] as $k => $v) {
                 $rel_data['payment_id'] = $data['payment_id'];
-                $rel_data['source_id'] = $v['source_id'];
-                $rel_data['money'] = $v['money'];
-                $rel_arr[] = $rel_data;
+                $rel_data['source_id']  = $v['source_id'];
+                $rel_data['money']      = $v['money'];
+                $rel_arr[]              = $rel_data;
             }
             $billPaymentsRelModel = new BillPaymentsRel();
             $billPaymentsRelModel->saveAll($rel_arr);
 
             Db::commit();
-
 
         } catch (\Exception $e) {
             Db::rollback();
@@ -226,12 +238,12 @@ class BillPayments extends Common
             return $result;
         }
         //判断支付单金额是否为0，如果为0，直接支付成功,
-        if($data['money'] == 0 ||$data['money'] == '0' || $data['money'] == '0.00'){
-            $this->toUpdate($data['payment_id'],$this::STATUS_PAYED,$data['payment_code'],'金额为0，自动支付成功','');
+        if ($data['money'] == 0 || $data['money'] == '0' || $data['money'] == '0.00') {
+            $this->toUpdate($data['payment_id'], SELF::STATUS_PAYED, $data['payment_code'],$data['money'], '金额为0，自动支付成功', '');
             return error_code(10059);
         }
         $result['status'] = true;
-        $result['data'] = $data;
+        $result['data']   = $data;
         return $result;
 
 
@@ -242,11 +254,12 @@ class BillPayments extends Common
      * @param $payment_id
      * @param $status     支付单状态
      * @param string $payment_code  支付方式编码
+     * @param string $money         支付的金额
      * @param string $payed_msg     支付回调后的状态描述
      * @param string $trade_no      第三方支付单号
      * @return array
      */
-    public function toUpdate($payment_id, $status, $payment_code='', $payed_msg='', $trade_no='')
+    public function toUpdate($payment_id, $status, $payment_code,$money, $payed_msg='', $trade_no='')
     {
         $result = [
             'status' => false,
@@ -258,8 +271,9 @@ class BillPayments extends Common
         $data['payed_msg'] = $payed_msg;
         $data['trade_no'] = $trade_no;
 
-        $where['payment_id'] = $payment_id;
-        $where['status'] = self::STATUS_NOPAY;
+        $where[] = ['payment_id','eq', $payment_id];
+        $where[] = ['money','eq',$money];
+        $where[] = ['status','neq',self::STATUS_PAYED];
         $billPaymentInfo = $this->where($where)->find();
         if(!$billPaymentInfo){
             $result['msg'] = '没有找到此未支付的支付单号';
@@ -278,32 +292,20 @@ class BillPayments extends Common
                     foreach($billPaymentRelList as $k => $v){
                         $orderModel->pay($v['source_id'], $payment_code);
                     }
+                }elseif($billPaymentInfo['type'] == self::TYPE_RECHARGE){
+                    //给用户做充值
+                    $balance = new Balance();
+                    foreach ($billPaymentRelList as $k => $v) {
+                        $balance->change($v['source_id'], $balance::TYPE_RECHARGE, $v['money'], $v['payment_id']);
+                    }
+                }elseif($billPaymentInfo['type'] == self::TYPE_FORM_PAY || $billPaymentInfo['type'] == self::TYPE_FORM_ORDER ){
+                    //form表单支付
+                    $formSubitModel = new FormSubmit();
+                    foreach ($billPaymentRelList as $k => $v) {
+                        $formSubitModel->pay($v['source_id'],$payment_code);
+                    }
                 }elseif(false){
                     //::todo 其他业务逻辑
-                }
-
-                //存储微信消息模板 todo::不清楚 $billPaymentInfo['generate_params'] 里面存的什么数据格式
-                if(isset($billPaymentInfo['generate_params']))
-                {
-                    $generate_params = json_decode($billPaymentInfo['generate_params'], true);
-                    if($generate_params['package'])
-                    {
-                        $prepay_id = str_replace("prepay_id=","", $generate_params['package']);
-                        if($prepay_id)
-                        {
-                            //获取orderid
-                            $billPaymentID = $billPaymentsRelModel->where(array('payment_id'=>$payment_id))->find();
-
-                            $templateMessageModel = new TemplateMessage();
-                            $message = [
-                                'type' => $templateMessageModel::TYPE_PAYMENT,
-                                'code' => $billPaymentID['source_id'],
-                                'form_id' => $prepay_id,
-                                'status' => $templateMessageModel::SEND_STATUS_NO
-                            ];
-                            $templateMessageModel->addSend($message);
-                        }
-                    }
                 }
             }
             Db::commit();
@@ -322,49 +324,84 @@ class BillPayments extends Common
 
     }
 
-    /**
+    /***
      * 生成支付单的时候，格式化支付单明细
      * @param $source_str
      * @param $type
-     * @return array
+     * @param array $params
+     * @return array|\think\Config
      */
-    public function formatPaymentRel($source_str,$type)
+    public function formatPaymentRel($source_str, $type, $params = [])
     {
-        $result = [
+        $result     = [
             'status' => false,
-            'data' => [],
+            'data'   => [],
 //                'user_id' => '',                //用户id
 //                'money' => 0,                   //总金额
 //                'rel' => array()
-            'msg' => ''
+            'msg'    => ''
         ];
-        $source_arr = explode(',',$source_str);
-        if($type == self::TYPE_ORDER){
+        $source_arr = explode(',', $source_str);
+        if ($type == self::TYPE_ORDER) {
             //如果是订单生成支付单的话，取第一条订单的店铺id，后面的所有订单都要保证是此店铺的id
             $orderModel = new Order();
 
             $data['money'] = 0;
-            foreach($source_arr as $k => $v){
-                $where['order_id'] = $v;
+            foreach ($source_arr as $k => $v) {
+                $where['order_id']   = $v;
                 $where['pay_status'] = $orderModel::PAY_STATUS_NO;
-                $where['status'] = $orderModel::ORDER_STATUS_NORMAL;
-                $order_info = $orderModel->where($where)->find();
-                if($order_info){
+                $where['status']     = $orderModel::ORDER_STATUS_NORMAL;
+                $order_info          = $orderModel->where($where)->find();
+                if ($order_info) {
                     $data['rel'][] = array(
                         'source_id' => $v,
-                        'money' => $order_info->order_amount,
+                        'money'     => $order_info->order_amount,
                     );
                     $data['money'] += $order_info->order_amount;
-                }else {
-                    $result['msg'] = '订单号：'.$v.'没有找到,或不是未支付状态';
+                } else {
+                    $result['msg'] = '订单号：' . $v . '没有找到,或不是未支付状态';
                     return $result;
                 }
             }
             $result['status'] = true;
-            $result['data'] = $data;
-        }elseif(false){
+            $result['data']   = $data;
+        } elseif ($type == self::TYPE_RECHARGE) { //账户充值
+            $data['money'] = (float)$params['money'];//充值金额
+            if (!$data['money']) {
+                $result['msg'] = '请输入正确的充值金额';
+                return $result;
+            }
+            foreach ($source_arr as $k => $v) {
+                $data['rel'][] = array(
+                    'source_id' => $v,
+                    'money'     => $data['money'],
+                );
+            }
+            $result['status'] = true;
+            $result['data']   = $data;
+        } elseif ($type == self::TYPE_FORM_PAY ||$type == self::TYPE_FORM_ORDER) { //表单支付
+            $formSubmit = new FormSubmit();
+            $data['money'] = 0;
+            foreach ($source_arr as $k => $v) {
+                $where['id']   = $v;
+                $where['pay_status'] = $formSubmit::FORM_PAY_STATUS_NO;
+                $form_info           = $formSubmit->where($where)->find();
+                if ($form_info) {
+                    $data['rel'][] = array(
+                        'source_id' => $v,
+                        'money'     => $form_info->money,
+                    );
+                    $data['money'] += $form_info->money;
+                } else {
+                    $result['msg'] = '表单：' . $v . '没有找到,或不是未支付状态';
+                    return $result;
+                }
+            }
+            $result['status'] = true;
+            $result['data']   = $data;
+        }elseif (false) {
             //::todo 其他业务逻辑
-        }else{
+        } else {
             return error_code(10054);
         }
 
@@ -377,7 +414,7 @@ class BillPayments extends Common
      * @param $payment_id
      * @return array|null|\PDOStatement|string|\think\Model
      */
-    public function getInfo($payment_id)
+    public function getInfo($payment_id,$user_id = 0)
     {
         $result = [
             'status' => true,
@@ -385,6 +422,9 @@ class BillPayments extends Common
             'msg' => ''
         ];
         $where['payment_id'] = $payment_id;
+        if($user_id != 0){
+            $where['user_id'] = $user_id;
+        }
         $billPaymentInfo = $this->where($where)->find();
         if(!$billPaymentInfo){
             $result['msg'] = '没有找到此支付记录';
@@ -420,15 +460,200 @@ class BillPayments extends Common
     /**
      * 支付单统计
      * @return array
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\ModelNotFoundException
+     * @throws \think\exception\DbException
      */
     public function statistics()
     {
         $num = 7;
         $day = date('Y-m-d', strtotime('-'.$num.' day'));
-        $sql = 'SELECT DATE_FORMAT(from_unixtime(ctime),"%Y-%m-%d") as day, count(*) as nums FROM '.config('database.prefix')
-            .'bill_payments WHERE from_unixtime(ctime) >= "'.$day.'" AND `status` = 2 AND `type` = 1 GROUP BY DATE_FORMAT(from_unixtime(ctime),"%Y-%m-%d")';
-        $res = Db::query($sql);
+
+        $where[] = ['status', 'eq', self::STATUS_PAYED];
+        $where[] = ['type', 'eq', self::TYPE_ORDER];
+        $res = $this->field(['count(1)'=> 'nums','DATE_FORMAT(FROM_UNIXTIME(ctime),"%Y-%m-%d")'=> 'day'])
+            ->where($where)
+            ->where('FROM_UNIXTIME(ctime) >= '.$day)
+            ->group('DATE_FORMAT(FROM_UNIXTIME(ctime),"%Y-%m-%d")')
+            ->select();
+
         $data = get_lately_days($num, $res);
         return ['day' => $data['day'], 'data' => $data['data']];
+    }
+
+    /**
+     * 设置csv header
+     * @return array
+     */
+    public function csvHeader()
+    {
+        return [
+            [
+                'id' => 'payment_id',
+                'desc' => '支付单号',
+                'modify'=>'convertString'
+            ],
+            [
+                'id' => 'status',
+                'desc' => '状态',
+            ],
+            [
+                'id' => 'payment_code',
+                'desc' => '支付方式',
+            ],
+            [
+                'id' => 'type',
+                'desc' => '单据类型',
+            ],
+
+
+            [
+                'id' => 'user_id',
+                'desc' => '用户',
+            ],
+            [
+                'id' => 'money',
+                'desc' => '金额',
+
+            ],
+            [
+                'id' => 'trade_no',
+                'desc' => '第三方支付单号',
+
+            ],
+            [
+                'id' => 'utime',
+                'desc' => '支付时间',
+
+            ],
+        ];
+    }
+    /**
+     * 获取csv数据
+     * @param $post
+     * @return array
+     */
+    public function getCsvData($post)
+    {
+        $result = [
+            'status' => false,
+            'data' => [],
+            'msg' => '无可导出数据',
+
+        ];
+        $header = $this->csvHeader();
+        $userData = $this->getExportList($post);
+
+        if ($userData['count'] > 0) {
+            $tempBody = $userData['data'];
+            $body = [];
+            $i = 0;
+
+            foreach ($tempBody as $key => $val) {
+                $i++;
+                foreach ($header as $hk => $hv) {
+                    if (isset($val[$hv['id']]) && $val[$hv['id']] && isset($hv['modify'])) {
+                        if (function_exists($hv['modify'])) {
+                            $body[$i][$hk] = $hv['modify']($val[$hv['id']]);
+                        }
+                    } elseif (isset($val[$hv['id']]) &&!empty($val[$hv['id']])) {
+                        $body[$i][$hk] = $val[$hv['id']];
+                    } else {
+                        $body[$i][$hk] = '';
+                    }
+                }
+            }
+            $result['status'] = true;
+            $result['msg'] = '导出成功';
+            $result['data'] = $body;
+            return $result;
+        } else {
+            //失败，导出失败
+            return $result;
+        }
+    }
+    /**
+     * 导出验证
+     * @param array $params
+     * @return array
+     */
+    public function exportValidate(&$params = [])
+    {
+        $result = [
+            'status' => false,
+            'data'   => [],
+            'msg'    => '参数丢失',
+        ];
+        return $result;
+    }
+    //导出格式
+    public function getExportList($post = [])
+    {
+        $return_data = [
+            'status' => false,
+            'msg' => '获取失败',
+            'data' => '',
+            'count' => 0
+        ];
+        $where = [];
+        if(isset($post['payment_id']) && $post['payment_id'] != ""){
+            $where[] = ['payment_id', 'like', '%'.$post['payment_id'].'%'];
+        }
+        if(isset($post['date']) && $post['date'] != "")
+        {
+            $date = explode(' 到 ', $post['date']);
+            $where[] = ['ctime', 'between time', [$date[0].' 00:00:00', $date[1].' 23:59:59']];
+        }
+        if(isset($post['mobile']) && $post['mobile'] != ""){
+            if($user_id = get_user_id($post['mobile'])){
+                $where[] = ['user_id', 'eq', $user_id];
+            }else{
+                $where[] = ['user_id', 'eq', '99999999'];       //如果没有此用户，那么就赋值个数值，让他查不出数据
+            }
+        }
+        if(isset($post['id']) && $post['id'] != ""){
+            $where[] = ['payment_id', 'in', $post['id']];
+        }
+        if(isset($post['trade_no']) && $post['trade_no'] != ""){
+            $where[] = ['trade_no', 'eq', $post['trade_no']];
+        }
+        if(isset($post['status']) && $post['status'] != ""){
+            $where[] = ['status', 'eq', $post['status']];
+        }
+        if(isset($post['type']) && $post['type'] != ""){
+            $where[] = ['type', 'eq', $post['type']];
+        }
+
+        $list = $this->where($where)
+            ->order('utime desc')
+            ->select();
+
+        if($list){
+            $count = $this->where($where)->count();
+            foreach($list as $k => $v) {
+                if($v['status']) {
+                    $list[$k]['status'] = config('params.bill_payments')['status'][$v['status']];
+                }
+                if($v['user_id']) {
+                    $list[$k]['user_id'] = get_user_info($v['user_id']);
+                }
+                if($v['payment_code']) {
+                    $list[$k]['payment_code'] = config('params.payment_type')[$v['payment_code']];
+                }
+                if($v['utime']) {
+                    $list[$k]['utime'] = getTime($v['utime']);
+                }
+                if($v['type']) {
+                    $list[$k]['type'] = config('params.bill_payments')['type'][$v['type']];
+                }
+            }
+            $return_data = [
+                'status' => true,
+                'msg' => '获取成功',
+                'data' => $list,
+                'count' => $count
+            ];
+        }
+        return $return_data;
     }
 }

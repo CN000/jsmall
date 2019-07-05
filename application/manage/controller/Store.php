@@ -36,7 +36,13 @@ class Store extends Manage
         if(Request::isAjax())
         {
             $storeModel = new storeModel();
-            return $storeModel->addData(input('param.'));
+            $data =  input('param.');
+            if($data['coordinate']){
+                $coordinate = explode(',',$data['coordinate']);
+                $data['latitude'] = $coordinate[0];
+                $data['longitude'] = $coordinate[1];
+            }
+            return $storeModel->addData($data);
         }
         return $this->fetch();
     }
@@ -54,7 +60,13 @@ class Store extends Manage
         $storeModel = new storeModel();
         if(Request::isAjax())
         {
-            return $storeModel->editData(input('param.'));
+            $data =  input('param.');
+            if($data['coordinate']){
+                $coordinate = explode(',',$data['coordinate']);
+                $data['latitude'] = $coordinate[0];
+                $data['longitude'] = $coordinate[1];
+            }
+            return $storeModel->editData($data);
         }
         $info = $storeModel->where('id',input('param.id/d'))->find();
         if(!$info)
@@ -94,6 +106,8 @@ class Store extends Manage
         {
             $this->assign('coordinate',$coordinate);
         }
+        $qq_map_key = getSetting('qq_map_key');
+        $this->assign('qq_map_key',$qq_map_key);
         return $this->fetch('map');
     }
 
@@ -110,12 +124,15 @@ class Store extends Manage
         $id = Request::param('id', false);
         if(Request::isAjax())
         {
-            $storeModel = new Clerk();
+            $clerkModel = new Clerk();
             $page = Request::param('page', 1);
             $limit = Request::param('limit', 20);
-            return $storeModel->getList($id, $page, $limit);
+            return $clerkModel->getList($id, $page, $limit);
         }
         $this->assign('id', $id);
+        $storeModel = new storeModel();
+        $store = $storeModel->getAllList();
+        $this->assign('store', $store);
         return $this->fetch('clerkList');
     }
 

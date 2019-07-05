@@ -16,27 +16,34 @@ Page({
     toView: "",
     searchData: {
       where: {},
-      limit: app.config.list_limit,
+      limit: 10,
       page: 1,
       order: {
-        key:'id',
-        sort:'desc'
+        key:'sort',
+        sort:'asc'
       }
-    }
+    },
+    alllist: true,
+    allgrid: false,
+    searchKey: '搜索商品'
   },
 
   //加载执行
   onLoad: function (options) {
     var where = {};
     if (options.id) {
-      where = {
-        cat_id: options.id
-      }
+        where = {
+            cat_id: options.id
+        }
+        this.getGoodsClass(options.id);
     }
     if (options.key) {
       where = {
         search_name: options.key
       }
+      this.setData({
+        searchKey: options.key
+      });
     }
     if (options.type) {
       if (options.type == 'hot') {
@@ -64,6 +71,18 @@ Page({
     }
   },
 
+    //获取分类名称
+    getGoodsClass: function (id){
+        let data = {
+            id: id
+        }
+        app.api.getGoodsClass(data, function(res){
+            wx.setNavigationBarTitle({
+                title: res.data
+            });
+        });
+    },
+
   onChangeShowState: function () {
     var that = this;
     that.setData({
@@ -75,8 +94,8 @@ Page({
   comprehensive:function() {
     this.setSearchData({
       order: {
-        key: 'id',
-        sort: 'desc'
+        key: 'sort',
+        sort: 'asc'
       },
       page:1
     },true);
@@ -125,7 +144,10 @@ Page({
   maxPrice: function(e) {
     var reg = /^[0-9]+(.[0-9]{2})?$/;
     if (!reg.test(e.detail.value)) {
-      app.common.errorToBack('请输入正确金额', 0);
+      app.common.errorToShow('请输入正确金额');
+      this.setData({
+        maxPrice:''
+      })
     } else {
       this.setData({
         maxPrice: e.detail.value
@@ -136,26 +158,24 @@ Page({
   minPrice: function (e) {
     var reg = /^[0-9]+(.[0-9]{2})?$/;
     if (!reg.test(e.detail.value)) {
-      app.common.errorToBack('请输入正确金额',0);
+      app.common.errorToShow('请输入正确金额');
+      this.setData({
+        minPrice: ''
+      })
     }else{
       this.setData({
         minPrice: e.detail.value
       })
     }
-
-
-
-    
   },
 
   //查询价格区间
   searchPrice: function (event) {
-    if (this.data.minPrice > this.data.maxPrice){
-      app.common.errorToBack('价格区间有误', 0);
+
+    if (this.data.minPrice > 0 && this.data.maxPrice>0&&this.data.minPrice > this.data.maxPrice){
+      app.common.errorToShow('价格区间有误');
       return false;
     }
-
-
 
     this.setSearchData({
       page:1,
@@ -179,7 +199,6 @@ Page({
 
   //页面上拉触底事件的处理函数
   // onReachBottom: function () {
-  //   // console.log('加载更多');
   //   // setTimeout(() => {
   //   //   this.setData({
   //   //     isHideLoadMore: true,
@@ -190,8 +209,9 @@ Page({
 
   //跳转到商品详情页面
   goodsDetail: function (e) {
+    let ins = encodeURIComponent('id=' + e.currentTarget.dataset.id);
     wx.navigateTo({
-      url: '../detail/detail?id=' + e.currentTarget.dataset.id
+        url: '../detail/detail?scene=' + ins
     });
   },
 
@@ -209,11 +229,7 @@ Page({
     });
     //如果已经没有数据了，就不取数据了，直接提示已经没有数据
     if (page.data.loadingComplete) {
-      wx.showToast({
-        title: '暂时没有数据了',
-        icon: 'success',
-        duration: 2000
-      });
+      app.common.errorToBack('暂时没有数据了', 0);
       return false;
     }
     app.api.goodsList(this.data.searchData,function(res){
@@ -228,7 +244,6 @@ Page({
         if (page.data.searchData.page == 1 && res.data.list.length == 0){
           isEmpty = true;
         }
-
         page.setData({
           goodsList: page.data.goodsList.concat(res.data.list),
           ajaxStatus: false,
@@ -270,8 +285,35 @@ Page({
 
   //跳转搜索
   searchNav: function () {
-    wx.navigateTo({
-      url: '../search/search'
-    });
+      let pages = getCurrentPages();
+      let prevPage = pages[pages.length - 2]
+      let search_flag = prevPage.route;
+      if (search_flag == 'pages/goods/search/search') {
+          wx.navigateBack({
+              delta: 1
+          })
+      }else{
+          wx.navigateTo({
+              url: '../search/search'
+          });
+      }
+  },
+
+  listgrid: function(){
+    let page = this;    
+    if(page.data.alllist){
+      page.setData({
+      allgrid: true,
+      listgrid: true,
+      alllist: false,
+      })
+
+    } else{
+      page.setData({
+      alllist: true,
+      allgrid: false,
+      listgrid: false,
+      });
+    }    
   }
 });

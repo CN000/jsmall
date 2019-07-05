@@ -32,14 +32,12 @@ class Sms extends Common
         if(!$mobile){
             return error_code(11051);
         }
-
-
         //如果是登陆注册等的短信，增加校验
         if($code == 'reg' || $code == 'login' || $code== 'veri'){
             $where[] = ['mobile', 'eq', $mobile];
             $where[] = ['code', 'eq', $code];
             $where[] = ['ctime', 'gt', time()-60*10];
-            $where[] = ['ip', 'eq', get_client_ip()];
+            //$where[] = ['ip', 'eq', get_client_ip()];  //先暂时注释，不做ip检查
             $where[] = ['status', 'eq', self::STATUS_UNUSED];
 
             $smsInfo = $this->where($where)->order('id desc')->find();
@@ -81,7 +79,9 @@ class Sms extends Common
         $where[] = ['mobile', 'eq', $phone];
         $where[] = ['code', 'eq', $code];
         $where[] = ['ctime', 'gt', time()-60*10];
-        $where[] = ['ip', 'eq', get_client_ip()];
+
+        //$where[] = ['ip', 'eq', get_client_ip()]; #先屏蔽ip检查，避免增加cdn或代理ip时出现问题
+
         $where[] = ['status', 'eq', self::STATUS_UNUSED];
         $sms_info = $this->where($where)->order('id desc')->find();
         if($sms_info){
@@ -117,16 +117,19 @@ class Sms extends Common
                 $msg = "恭喜您，订单支付成功,祝您购物愉快。";
                 break;
             case 'remind_order_pay':
-                $msg = "您的订单还有3个小时就要取消了，请立即进行支付。";
+                $msg = "您的订单还有1个小时就要取消了，请及时进行支付。";
                 break;
             case 'delivery_notice':
-                $msg = "你好，你的订单已经发货。";
+                $msg = "您好，您的订单已经发货。";
                 break;
             case 'aftersales_pass':
-                $msg = "你好，您的售后已经通过。";
+                $msg = "您好，您的售后已经通过。";
                 break;
             case 'refund_success':
-                $msg = "用户你好，你的退款已经处理，请确认。";
+                $msg = "用户您好，您的退款已经处理，请确认。";
+                break;
+            case 'seller_order_notice':
+                $msg = "您有新的订单了，请及时处理。";
                 break;
             case 'common':
                 $msg = $params['tpl'];
@@ -144,7 +147,8 @@ class Sms extends Common
      * @param $params
      * @return array
      */
-    private function send_sms($mobile,$content,$code,$params){
+    private function send_sms($mobile, $content, $code, $params)
+    {
 
         $re = hook('sendsms', ['params' => [
             'mobile'  => $mobile,
@@ -152,11 +156,11 @@ class Sms extends Common
             'code'    => $code,
             'params'  => $params,
         ]]);
-
-        if ($re) {
+        if (isset($re[0]['status']) && $re[0]['status']) {
             return ['status' => true, 'msg' => '发送成功！'];
         } else {
-            return ['status' => false, 'msg' => '发送失败！'];
+            $msg = isset($re[0]['msg']) ? $re[0]['msg'] : '发送失败';
+            return ['status' => false, 'msg' => $msg];
         }
     }
 
